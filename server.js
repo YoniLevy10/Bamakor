@@ -9,12 +9,11 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
 
+// זיכרון פשוט למניעת עיבוד כפול של אותה הודעה
+const processedMessages = new Set();
+
 app.get("/", (req, res) => {
   res.status(200).send("Bamakor webhook server is live");
-});
-
-app.get("/health", (req, res) => {
-  res.status(200).json({ ok: true });
 });
 
 app.get("/webhook", (req, res) => {
@@ -34,6 +33,9 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  // תמיד מאשרים מהר ל-Meta כדי למנוע retries מיותרים
+  res.sendStatus(200);
+
   try {
     console.log("Incoming webhook body:", JSON.stringify(req.body, null, 2));
 
@@ -44,35 +46,49 @@ app.post("/webhook", async (req, res) => {
 
     if (!message) {
       console.log("No message found in webhook");
-      return res.sendStatus(200);
+      return;
     }
 
     if (message.type !== "text") {
       console.log("Unsupported message type:", message.type);
-      return res.sendStatus(200);
+      return;
     }
 
+    const messageId = message.id;
     const from = message.from;
     const body = message.text?.body?.trim() || "";
 
-    if (!from || !body) {
-      console.log("Missing from/body");
-      return res.sendStatus(200);
+    if (!from || !body || !messageId) {
+      console.log("Missing from/body/messageId");
+      return;
     }
+
+    // מניעת עיבוד כפול של אותה הודעה
+    if (processedMessages.has(messageId)) {
+      console.log("Duplicate message ignored:", messageId);
+      return;
+    }
+
+    processedMessages.add(messageId);
+
+    // ניקוי זיכרון אחרי זמן כדי לא להתנפח
+    setTimeout(() => {
+      processedMessages.delete(messageId);
+    }, 10 * 60 * 1000);
 
     if (!APPS_SCRIPT_URL) {
       console.error("Missing APPS_SCRIPT_URL env variable");
-      return res.sendStatus(500);
+      return;
     }
 
     if (!WHATSAPP_TOKEN) {
       console.error("Missing WHATSAPP_TOKEN env variable");
-      return res.sendStatus(500);
+      return;
     }
 
     if (!PHONE_NUMBER_ID) {
       console.error("Missing PHONE_NUMBER_ID env variable");
-      return res.sendStatus(500);
+      return;
     }
 
     console.log("Sending message to Apps Script:", { from, body });
@@ -96,7 +112,7 @@ app.post("/webhook", async (req, res) => {
       scriptData = JSON.parse(scriptText);
     } catch (parseError) {
       console.error("Failed to parse Apps Script response as JSON");
-      return res.sendStatus(500);
+      return;
     }
 
     const replyText = scriptData.reply || "ההודעה התקבלה.";
@@ -125,13 +141,12 @@ app.post("/webhook", async (req, res) => {
 
     if (!whatsappResponse.ok) {
       console.error("Failed sending message to WhatsApp");
-      return res.sendStatus(500);
+      return;
     }
 
-    return res.sendStatus(200);
+    console.log("Reply sent successfully");
   } catch (error) {
     console.error("Webhook error:", error);
-    return res.sendStatus(500);
   }
 });
 
