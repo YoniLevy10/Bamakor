@@ -9,11 +9,15 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
 
-// זיכרון פשוט למניעת עיבוד כפול של אותה הודעה
+// מניעת עיבוד כפול של אותה הודעה
 const processedMessages = new Set();
 
 app.get("/", (req, res) => {
   res.status(200).send("Bamakor webhook server is live");
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true });
 });
 
 app.get("/webhook", (req, res) => {
@@ -33,7 +37,7 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
-  // תמיד מאשרים מהר ל-Meta כדי למנוע retries מיותרים
+  // תמיד מחזירים 200 מהר כדי למנוע retries מיותרים מ-Meta
   res.sendStatus(200);
 
   try {
@@ -42,13 +46,21 @@ app.post("/webhook", async (req, res) => {
     const entry = req.body.entry?.[0];
     const changes = entry?.changes?.[0];
     const value = changes?.value;
-    const message = value?.messages?.[0];
 
-    if (!message) {
-      console.log("No message found in webhook");
+    if (!value) {
+      console.log("No value found in webhook");
       return;
     }
 
+    // אם זה לא אירוע של הודעה אמיתית - מתעלמים
+    if (!value.messages || !Array.isArray(value.messages) || value.messages.length === 0) {
+      console.log("Webhook event is not a message");
+      return;
+    }
+
+    const message = value.messages[0];
+
+    // מטפלים רק בטקסט
     if (message.type !== "text") {
       console.log("Unsupported message type:", message.type);
       return;
@@ -58,12 +70,12 @@ app.post("/webhook", async (req, res) => {
     const from = message.from;
     const body = message.text?.body?.trim() || "";
 
-    if (!from || !body || !messageId) {
-      console.log("Missing from/body/messageId");
+    if (!messageId || !from || !body) {
+      console.log("Missing messageId / from / body");
       return;
     }
 
-    // מניעת עיבוד כפול של אותה הודעה
+    // מניעת עיבוד כפול
     if (processedMessages.has(messageId)) {
       console.log("Duplicate message ignored:", messageId);
       return;
@@ -71,7 +83,7 @@ app.post("/webhook", async (req, res) => {
 
     processedMessages.add(messageId);
 
-    // ניקוי זיכרון אחרי זמן כדי לא להתנפח
+    // ניקוי אוטומטי מהזיכרון אחרי 10 דקות
     setTimeout(() => {
       processedMessages.delete(messageId);
     }, 10 * 60 * 1000);
