@@ -54,30 +54,21 @@ app.post("/webhook", async (req, res) => {
       return;
     }
 
-    // אם זה לא אירוע של הודעה אמיתית - מתעלמים
     if (!value.messages || !Array.isArray(value.messages) || value.messages.length === 0) {
       console.log("Webhook event is not a message");
       return;
     }
 
     const message = value.messages[0];
-
-    // תומכים רק בטקסט
-    if (message.type !== "text") {
-      console.log("Unsupported message type:", message.type);
-      return;
-    }
-
     const messageId = message.id;
     const from = message.from;
-    const body = (message.text?.body || "").trim();
+    const messageType = message.type;
 
-    if (!messageId || !from || !body) {
-      console.log("Missing messageId / from / body");
+    if (!messageId || !from) {
+      console.log("Missing messageId / from");
       return;
     }
 
-    // מניעת כפילויות
     if (processedMessages.has(messageId)) {
       console.log("Duplicate message ignored:", messageId);
       return;
@@ -86,9 +77,9 @@ app.post("/webhook", async (req, res) => {
     processedMessages.add(messageId);
     setTimeout(() => processedMessages.delete(messageId), 10 * 60 * 1000);
 
-    console.log("User message:", { from, body });
+    console.log("Incoming user message:", { from, messageType });
 
-    const replyText = await handleConversation(from, body);
+    const replyText = await handleConversation(from, message, value);
     console.log("Reply text:", replyText);
 
     if (!replyText) {
@@ -103,9 +94,10 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-async function handleConversation(phone, incomingText) {
+async function handleConversation(phone, message, value) {
   let session = sessions.get(phone);
-  const text = incomingText.trim();
+  const messageType = message.type;
+  const text = (message.text?.body || "").trim();
 
   // התחלת שיחה - בחירת שפה
   if (!session) {
@@ -116,6 +108,8 @@ async function handleConversation(phone, incomingText) {
       building: "",
       apartment: "",
       issue: "",
+      ticketId: "",
+      imageUrl: "",
       updatedAt: Date.now()
     };
 
@@ -127,6 +121,10 @@ async function handleConversation(phone, incomingText) {
 
   // בחירת שפה
   if (session.step === "choose_language") {
+    if (messageType !== "text") {
+      return getLanguageSelectionInvalidText();
+    }
+
     if (text === "1") {
       session.lang = "he";
       session.step = "waiting_street";
@@ -142,58 +140,48 @@ async function handleConversation(phone, incomingText) {
     return getLanguageSelectionInvalidText();
   }
 
-  if (session.step === "after_ticket") {
-    if (text === "1") {
-      session.step = "waiting_street";
-      session.street = "";
-      session.building = "";
-      session.apartment = "";
-      session.issue = "";
-      return getText(session.lang, "ask_street_again");
-    }
-
-    if (text === "0") {
-      sessions.delete(phone);
-      return getText(session.lang, "end");
-    }
-
-    return getText(session.lang, "invalid_choice");
-  }
-
   if (session.step === "waiting_street") {
+    if (messageType !== "text") {
+      return getText(session.lang, "street_text_only");
+    }
+
     session.street = text;
     session.step = "waiting_building";
     return getText(session.lang, "ask_building");
   }
 
   if (session.step === "waiting_building") {
+    if (messageType !== "text") {
+      return getText(session.lang, "building_text_only");
+    }
+
     session.building = text;
     session.step = "waiting_apartment";
     return getText(session.lang, "ask_apartment");
   }
 
   if (session.step === "waiting_apartment") {
+    if (messageType !== "text") {
+      return getText(session.lang, "apartment_text_only");
+    }
+
     session.apartment = text;
     session.step = "waiting_issue";
     return getText(session.lang, "ask_issue");
   }
 
   if (session.step === "waiting_issue") {
+    if (messageType !== "text") {
+      return getText(session.lang, "issue_text_only");
+    }
+
     session.issue = text;
+    session.ticketId = generateTicketId();
+    session.step = "waiting_optional_image";
 
-    await writeTicketToSheet({
-      phone,
-      lang: session.lang,
-      street: session.street,
-      building: session.building,
-      apartment: session.apartment,
-      issue: session.issue
-    });
-
-    session.step = "after_ticket";
-
-    return buildSummaryMessage(
+    return buildPreSummaryMessage(
       session.lang,
+      session.ticketId,
       session.street,
       session.building,
       session.apartment,
@@ -201,7 +189,40 @@ async function handleConversation(phone, incomingText) {
     );
   }
 
-  // fallback
+  if (session.step === "waiting_optional_image") {
+    // אם שלח תמונה
+    if (messageType === "image") {
+      const imageId = message.image?.id || "";
+      session.imageUrl = imageId ? `whatsapp-media-id:${imageId}` : "";
+    }
+
+    // אם שלח טקסט "דלג" / "skip" או שלח כל טקסט אחר - פשוט נמשיך
+    await writeTicketToSheet({
+      ticketId: session.ticketId,
+      phone,
+      lang: session.lang,
+      street: session.street,
+      building: session.building,
+      apartment: session.apartment,
+      issue: session.issue,
+      imageUrl: session.imageUrl || ""
+    });
+
+    const summary = buildFinalSummaryMessage(
+      session.lang,
+      session.ticketId,
+      session.street,
+      session.building,
+      session.apartment,
+      session.issue,
+      session.imageUrl
+    );
+
+    // סוגרים session אוטומטית - אין תלות ב-0/1
+    sessions.delete(phone);
+    return summary;
+  }
+
   sessions.delete(phone);
   return getLanguageSelectionText();
 }
@@ -271,10 +292,15 @@ async function sendWhatsAppMessage(to, messageText) {
   }
 }
 
+function generateTicketId() {
+  const random = Math.floor(100000 + Math.random() * 900000);
+  return `BMK-${random}`;
+}
+
 function getLanguageSelectionText() {
   return (
-    "ברוכים הבאים למערכת פתיחת תקלות 🛠️\n" +
-    "Welcome to the fault reporting system 🛠️\n\n" +
+    "ברוכים הבאים למוקד התקלות של Bamakor 🛠️\n" +
+    "Welcome to Bamakor maintenance desk 🛠️\n\n" +
     "לבחירת שפה / Choose language:\n" +
     "1 - עברית\n" +
     "2 - English"
@@ -295,66 +321,102 @@ function getText(lang, key) {
   const texts = {
     he: {
       ask_street:
-        "שלום וברוכים הבאים למערכת פתיחת תקלות.\n\nבאיזה רחוב אתה גר?",
+        "שלום וברוכים הבאים למוקד התקלות של Bamakor.\n\nנא לציין את שם הרחוב.",
       ask_building:
-        "תודה. מה מספר הבניין?",
+        "תודה. נא לציין את מספר הבניין.",
       ask_apartment:
-        "מעולה. מה מספר הדירה?",
+        "מעולה. נא לציין את מספר הדירה.",
       ask_issue:
-        "אנא פרט מהי התקלה.",
-      ask_street_again:
-        "פתיחת פנייה חדשה.\nבאיזה רחוב אתה גר?",
-      end:
-        "תודה שפנית אלינו. השיחה הסתיימה.",
-      invalid_choice:
-        "לא זיהיתי את הבחירה.\nלחץ 1 לפתיחת פנייה חדשה\nלחץ 0 לסיום השיחה"
+        "אנא פרט בקצרה מהי התקלה.",
+      street_text_only:
+        "נא לרשום את שם הרחוב בטקסט בלבד.",
+      building_text_only:
+        "נא לרשום את מספר הבניין בטקסט בלבד.",
+      apartment_text_only:
+        "נא לרשום את מספר הדירה בטקסט בלבד.",
+      issue_text_only:
+        "נא לפרט את התקלה בטקסט בלבד.",
+      ask_optional_image:
+        "אם תרצה, אפשר לשלוח עכשיו צילום של התקלה.\nאם אין צילום, אפשר לכתוב 'דלג'."
     },
     en: {
       ask_street:
-        "Hello and welcome to the fault reporting system.\n\nWhat street do you live on?",
+        "Hello and welcome to the Bamakor maintenance desk.\n\nPlease enter the street name.",
       ask_building:
-        "Thank you. What is the building number?",
+        "Thank you. Please enter the building number.",
       ask_apartment:
-        "Great. What is the apartment number?",
+        "Great. Please enter the apartment number.",
       ask_issue:
-        "Please describe the issue.",
-      ask_street_again:
-        "Starting a new report.\nWhat street do you live on?",
-      end:
-        "Thank you for contacting us. The conversation has ended.",
-      invalid_choice:
-        "I did not recognize your choice.\nPress 1 to open a new ticket\nPress 0 to end the conversation"
+        "Please briefly describe the issue.",
+      street_text_only:
+        "Please enter the street name as text only.",
+      building_text_only:
+        "Please enter the building number as text only.",
+      apartment_text_only:
+        "Please enter the apartment number as text only.",
+      issue_text_only:
+        "Please describe the issue as text only.",
+      ask_optional_image:
+        "If you want, you can now send a photo of the issue.\nIf not, type 'skip'."
     }
   };
 
   return texts[lang]?.[key] || texts.he[key];
 }
 
-function buildSummaryMessage(lang, street, building, apartment, issue) {
+function buildPreSummaryMessage(lang, ticketId, street, building, apartment, issue) {
   if (lang === "en") {
     return (
-      "✅ Your report has been received and forwarded for treatment.\n\n" +
-      "Report details:\n" +
+      `Thank you. Your report is almost ready.\n` +
+      `Ticket number: ${ticketId}\n\n` +
+      `Summary:\n` +
       `Street: ${street}\n` +
       `Building: ${building}\n` +
       `Apartment: ${apartment}\n` +
       `Issue: ${issue}\n\n` +
-      "Next step:\n" +
-      "Press 1 to open a new ticket\n" +
-      "Press 0 to end the conversation"
+      `If you want, send a photo of the issue now.\n` +
+      `If not, type "skip".`
     );
   }
 
   return (
-    "✅ הפנייה התקבלה והועברה לטיפול.\n\n" +
-    "פרטי הפנייה:\n" +
+    `תודה. הפנייה שלך כמעט מוכנה.\n` +
+    `מספר פנייה: ${ticketId}\n\n` +
+    `סיכום:\n` +
     `רחוב: ${street}\n` +
     `בניין: ${building}\n` +
     `דירה: ${apartment}\n` +
     `תקלה: ${issue}\n\n` +
-    "להמשך:\n" +
-    "לחץ 1 לפתיחת פנייה חדשה\n" +
-    "לחץ 0 לסיום השיחה"
+    `אם תרצה, אפשר לשלוח עכשיו צילום של התקלה.\n` +
+    `אם אין צילום, אפשר לכתוב "דלג".`
+  );
+}
+
+function buildFinalSummaryMessage(lang, ticketId, street, building, apartment, issue, imageUrl) {
+  if (lang === "en") {
+    return (
+      `✅ Your report has been received and forwarded for treatment.\n\n` +
+      `Ticket number: ${ticketId}\n\n` +
+      `Report details:\n` +
+      `Street: ${street}\n` +
+      `Building: ${building}\n` +
+      `Apartment: ${apartment}\n` +
+      `Issue: ${issue}\n` +
+      `Photo attached: ${imageUrl ? "Yes" : "No"}\n\n` +
+      `To open a new ticket, simply send a new message at any time.`
+    );
+  }
+
+  return (
+    `✅ הפנייה התקבלה והועברה לטיפול.\n\n` +
+    `מספר פנייה: ${ticketId}\n\n` +
+    `פרטי הפנייה:\n` +
+    `רחוב: ${street}\n` +
+    `בניין: ${building}\n` +
+    `דירה: ${apartment}\n` +
+    `תקלה: ${issue}\n` +
+    `צילום צורף: ${imageUrl ? "כן" : "לא"}\n\n` +
+    `לפתיחת פנייה חדשה, ניתן לשלוח הודעה חדשה בכל עת.`
   );
 }
 
