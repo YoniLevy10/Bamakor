@@ -105,14 +105,13 @@ app.post("/webhook", async (req, res) => {
 
 async function handleConversation(phone, incomingText) {
   let session = sessions.get(phone);
+  const text = incomingText.trim();
 
-  // התחלת שיחה
+  // התחלת שיחה - בחירת שפה
   if (!session) {
-    const lang = detectLanguage(incomingText);
-
     session = {
-      lang,
-      step: "waiting_street",
+      lang: null,
+      step: "choose_language",
       street: "",
       building: "",
       apartment: "",
@@ -121,12 +120,27 @@ async function handleConversation(phone, incomingText) {
     };
 
     sessions.set(phone, session);
-
-    return getText(lang, "welcome");
+    return getLanguageSelectionText();
   }
 
   session.updatedAt = Date.now();
-  const text = incomingText.trim();
+
+  // בחירת שפה
+  if (session.step === "choose_language") {
+    if (text === "1") {
+      session.lang = "he";
+      session.step = "waiting_street";
+      return getText(session.lang, "ask_street");
+    }
+
+    if (text === "2") {
+      session.lang = "en";
+      session.step = "waiting_street";
+      return getText(session.lang, "ask_street");
+    }
+
+    return getLanguageSelectionInvalidText();
+  }
 
   if (session.step === "after_ticket") {
     if (text === "1") {
@@ -167,7 +181,6 @@ async function handleConversation(phone, incomingText) {
   if (session.step === "waiting_issue") {
     session.issue = text;
 
-    // כתיבה ל-Google Sheets
     await writeTicketToSheet({
       phone,
       lang: session.lang,
@@ -179,12 +192,18 @@ async function handleConversation(phone, incomingText) {
 
     session.step = "after_ticket";
 
-    return buildSummaryMessage(session.lang, session.street, session.building, session.apartment, session.issue);
+    return buildSummaryMessage(
+      session.lang,
+      session.street,
+      session.building,
+      session.apartment,
+      session.issue
+    );
   }
 
   // fallback
-  session.step = "waiting_street";
-  return getText(session.lang, "welcome");
+  sessions.delete(phone);
+  return getLanguageSelectionText();
 }
 
 async function writeTicketToSheet(data) {
@@ -252,14 +271,30 @@ async function sendWhatsAppMessage(to, messageText) {
   }
 }
 
-function detectLanguage(text) {
-  return /[\u0590-\u05FF]/.test(text) ? "he" : "en";
+function getLanguageSelectionText() {
+  return (
+    "ברוכים הבאים למערכת פתיחת תקלות 🛠️\n" +
+    "Welcome to the fault reporting system 🛠️\n\n" +
+    "לבחירת שפה / Choose language:\n" +
+    "1 - עברית\n" +
+    "2 - English"
+  );
+}
+
+function getLanguageSelectionInvalidText() {
+  return (
+    "בחירה לא תקינה.\n" +
+    "Invalid choice.\n\n" +
+    "לבחירת שפה / Choose language:\n" +
+    "1 - עברית\n" +
+    "2 - English"
+  );
 }
 
 function getText(lang, key) {
   const texts = {
     he: {
-      welcome:
+      ask_street:
         "שלום וברוכים הבאים למערכת פתיחת תקלות.\n\nבאיזה רחוב אתה גר?",
       ask_building:
         "תודה. מה מספר הבניין?",
@@ -275,7 +310,7 @@ function getText(lang, key) {
         "לא זיהיתי את הבחירה.\nלחץ 1 לפתיחת פנייה חדשה\nלחץ 0 לסיום השיחה"
     },
     en: {
-      welcome:
+      ask_street:
         "Hello and welcome to the fault reporting system.\n\nWhat street do you live on?",
       ask_building:
         "Thank you. What is the building number?",
