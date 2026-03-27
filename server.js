@@ -3,7 +3,6 @@ const path = require("path");
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
@@ -16,8 +15,16 @@ const sessions = new Map();
 // מניעת עיבוד כפול של אותה הודעה
 const processedMessages = new Set();
 
+/**
+ * ROOT - מגיש את הדשבורד מהשורש של הפרויקט
+ * חשוב: dashboard.html צריך לשבת ליד server.js
+ */
 app.get("/", (req, res) => {
-  res.redirect("/dashboard.html");
+  res.sendFile(path.join(__dirname, "dashboard.html"));
+});
+
+app.get("/dashboard.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "dashboard.html"));
 });
 
 app.get("/health", (req, res) => {
@@ -37,6 +44,7 @@ app.get("/webhook", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+  // מחזירים 200 מיד כדי למנוע retries מיותרים מ-Meta
   res.sendStatus(200);
 
   try {
@@ -72,10 +80,18 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
+/**
+ * שליפת כל הפניות לדשבורד
+ */
 app.get("/api/tickets", async (req, res) => {
   try {
+    if (!APPS_SCRIPT_URL) {
+      return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
+    }
+
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listTickets`);
     const data = await response.json();
+
     res.json(data);
   } catch (error) {
     console.error("GET /api/tickets error:", error);
@@ -83,14 +99,34 @@ app.get("/api/tickets", async (req, res) => {
   }
 });
 
+/**
+ * עדכון סטטוס פנייה מהדשבורד
+ * מצפה לקבל:
+ * {
+ *   ticketId: "BMK-123456",
+ *   status: "פתוח" | "סגור"
+ * }
+ */
 app.post("/api/tickets/status", async (req, res) => {
   try {
+    if (!APPS_SCRIPT_URL) {
+      return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
+    }
+
     const { ticketId, status } = req.body || {};
 
     if (!ticketId || !status) {
       return res.status(400).json({
         ok: false,
         error: "Missing ticketId or status"
+      });
+    }
+
+    const allowedStatuses = ["פתוח", "סגור"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Invalid status"
       });
     }
 
@@ -119,6 +155,7 @@ async function handleConversation(phone, message) {
   const messageType = message.type;
   const text = (message.text?.body || "").trim();
 
+  // התחלת שיחה - בחירת שפה
   if (!session) {
     session = {
       lang: null,
@@ -196,11 +233,13 @@ async function handleConversation(phone, message) {
   }
 
   if (session.step === "waiting_optional_image") {
+    // אם נשלחה תמונה
     if (messageType === "image") {
       const imageId = message.image?.id || "";
       session.imageUrl = imageId ? `whatsapp-media-id:${imageId}` : "";
     }
 
+    // גם אם שלח טקסט "דלג" / "skip" / כל טקסט אחר - נמשיך לסגירה
     await writeTicketToSheet({
       ticketId: session.ticketId,
       phone,
@@ -231,6 +270,10 @@ async function handleConversation(phone, message) {
 }
 
 async function writeTicketToSheet(data) {
+  if (!APPS_SCRIPT_URL) {
+    throw new Error("Missing APPS_SCRIPT_URL env variable");
+  }
+
   const response = await fetch(APPS_SCRIPT_URL, {
     method: "POST",
     headers: {
@@ -257,6 +300,14 @@ async function writeTicketToSheet(data) {
 }
 
 async function sendWhatsAppMessage(to, messageText) {
+  if (!WHATSAPP_TOKEN) {
+    throw new Error("Missing WHATSAPP_TOKEN env variable");
+  }
+
+  if (!PHONE_NUMBER_ID) {
+    throw new Error("Missing PHONE_NUMBER_ID env variable");
+  }
+
   const response = await fetch(
     `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`,
     {
@@ -390,6 +441,7 @@ function buildFinalSummaryMessage(lang, ticketId, street, building, apartment, i
   );
 }
 
+// ניקוי sessions ישנים פעם ב-10 דקות
 setInterval(() => {
   const now = Date.now();
   for (const [phone, session] of sessions.entries()) {
