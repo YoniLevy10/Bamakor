@@ -3,31 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#667eea">
+    <meta name="theme-color" content="#C41E3A">
     <meta name="description" content="Bamakor Ticket Management System">
     <link rel="manifest" href="/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dy='.3em'>🔧</text></svg>">
-    <title>CEO Dashboard - Bamakor</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23C41E3A' width='192' height='192'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dy='.3em'>🏢</text></svg>">
+    <title>Bamakor Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue';
+            background: linear-gradient(135deg, #3F3F3F 0%, #2a2a2a 100%);
             min-height: 100vh;
             padding: 20px;
+            color: #333;
         }
         .container { max-width: 1400px; margin: auto; }
         header {
-            background: rgba(255,255,255,0.95);
+            background: white;
             padding: 30px;
             border-radius: 15px;
             margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 5px solid #C41E3A;
         }
-        h1 { color: #333; }
+        h1 { 
+            color: #3F3F3F;
+            font-size: 32px;
+        }
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -38,16 +43,26 @@
             background: white;
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             text-align: center;
+            border-top: 4px solid #C41E3A;
         }
-        .stat-label { color: #999; font-size: 14px; margin-bottom: 10px; }
-        .stat-number { font-size: 36px; font-weight: bold; color: #667eea; }
+        .stat-label { 
+            color: #666; 
+            font-size: 14px; 
+            margin-bottom: 10px; 
+            font-weight: 500;
+        }
+        .stat-number { 
+            font-size: 36px; 
+            font-weight: bold; 
+            color: #C41E3A; 
+        }
         .table-wrapper {
             background: white;
             border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow-x: auto;
         }
         table {
@@ -55,37 +70,53 @@
             border-collapse: collapse;
         }
         th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3F3F3F 0%, #2a2a2a 100%);
             color: white;
             padding: 15px;
             text-align: left;
+            font-weight: 600;
         }
         td {
             padding: 15px;
             border-bottom: 1px solid #f0f0f0;
         }
-        tr:hover { background: #f8f9ff; }
+        tr:hover { background: #f8f8f8; }
         .status-btn {
             padding: 8px 16px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 13px;
         }
         .status-open {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #FFEBEE;
+            color: #C41E3A;
+            border: 1px solid #C41E3A;
         }
         .status-closed {
-            background: #dcfce7;
-            color: #166534;
+            background: #E8F5E9;
+            color: #2E7D32;
+            border: 1px solid #2E7D32;
         }
-        .btn { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
-        .btn:hover { background: #764ba2; }
+        .btn { 
+            background: #C41E3A; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn:hover { 
+            background: #A01730;
+            box-shadow: 0 5px 15px rgba(196, 30, 58, 0.3);
+        }
         .loading { text-align: center; padding: 40px; }
         .spinner {
             border: 4px solid #f0f0f0;
-            border-top: 4px solid #667eea;
+            border-top: 4px solid #C41E3A;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -116,7 +147,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🔧 Bamakor Dashboard</h1>
+            <h1>🏢 Bamakor Dashboard</h1>
             <button class="btn" onclick="loadData()">🔄 Refresh</button>
         </header>
 
