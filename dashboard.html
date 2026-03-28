@@ -59,7 +59,7 @@
         }
         .btn:hover { background: #A01730; }
         
-        /* Tabs/Menu */
+        /* Tabs */
         .tabs {
             display: flex;
             gap: 10px;
@@ -70,7 +70,6 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             flex-wrap: wrap;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
         }
         
         .tab {
@@ -129,7 +128,6 @@
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
         }
         
         table {
@@ -318,37 +316,53 @@
             font-weight: 600;
         }
         
-        /* Photo Modal */
-        .photo-modal {
-            display: none;
+        /* Toast Notification */
+        .toast {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 2000;
-        }
-        
-        .photo-modal.active {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .photo-modal img {
-            max-width: 90%;
-            max-height: 90%;
-            border-radius: 10px;
-        }
-        
-        .close-photo {
-            position: absolute;
-            top: 20px;
+            bottom: 20px;
             right: 20px;
+            background: #C41E3A;
             color: white;
-            font-size: 30px;
-            cursor: pointer;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 3000;
+            animation: slideIn 0.3s ease;
+            font-weight: 600;
+        }
+
+        .toast.success {
+            background: #2E7D32;
+        }
+
+        .toast.error {
+            background: #C41E3A;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.hide {
+            animation: slideOut 0.3s ease forwards;
         }
         
         /* Mobile Responsive */
@@ -385,6 +399,12 @@
             }
             .team-grid {
                 grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            .toast {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                width: auto;
             }
         }
         
@@ -463,13 +483,12 @@
                             <th class="col-apartment">Apartment</th>
                             <th>Issue</th>
                             <th>Status</th>
-                            <th>Photo</th>
                             <th>Assigned</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="ticketsBody">
-                        <tr><td colspan="10" class="empty-message"><div class="spinner"></div>Loading...</td></tr>
+                        <tr><td colspan="9" class="empty-message"><div class="spinner"></div>Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -486,13 +505,12 @@
                             <th class="col-street">Street</th>
                             <th>Issue</th>
                             <th>Status</th>
-                            <th>Photo</th>
                             <th>Assigned</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="openBody">
-                        <tr><td colspan="8" class="empty-message">No open tickets</td></tr>
+                        <tr><td colspan="7" class="empty-message">No open tickets</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -509,13 +527,12 @@
                             <th class="col-street">Street</th>
                             <th>Issue</th>
                             <th>Status</th>
-                            <th>Photo</th>
                             <th>Assigned</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="closedBody">
-                        <tr><td colspan="8" class="empty-message">No closed tickets</td></tr>
+                        <tr><td colspan="7" class="empty-message">No closed tickets</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -544,12 +561,6 @@
         </div>
     </div>
 
-    <!-- Photo Modal -->
-    <div class="photo-modal" id="photoModal">
-        <span class="close-photo" onclick="closePhotoModal()">&times;</span>
-        <img id="photoImage" src="" alt="Ticket Photo">
-    </div>
-
     <script>
         let allTickets = [];
         let allEmployees = [];
@@ -558,9 +569,20 @@
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
         }
 
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
         async function loadData() {
             try {
-                // Load Tickets
                 const ticketsRes = await fetch('/api/tickets');
                 const ticketsData = await ticketsRes.json();
                 
@@ -570,7 +592,6 @@
 
                 allTickets = ticketsData.tickets;
                 
-                // Load Employees
                 const empRes = await fetch('/api/employees');
                 const empData = await empRes.json();
                 
@@ -584,7 +605,7 @@
                 renderTickets();
             } catch(e) {
                 console.error('Error:', e);
-                document.getElementById('ticketsBody').innerHTML = '<tr><td colspan="10" style="text-align:center;color:red;">Error loading data</td></tr>';
+                showToast('Error loading data', 'error');
             }
         }
 
@@ -629,9 +650,6 @@
                             ${t.status === 'סגור' ? '✓ Closed' : '⏳ Open'}
                         </button>
                     </td>
-                    <td>
-                        ${t.imageUrl ? `<button class="action-btn" onclick="viewPhoto('${t.imageUrl}')">📸</button>` : '-'}
-                    </td>
                     <td>${t.assignedTo || '-'}</td>
                     <td>
                         <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
@@ -645,20 +663,17 @@
             const open = getFilteredTickets('open');
             const closed = getFilteredTickets('closed');
 
-            // All Tickets
             document.getElementById('ticketsBody').innerHTML = all.length > 0 
                 ? all.map(renderTicketRow).join('')
-                : '<tr><td colspan="10" class="empty-message">No tickets found</td></tr>';
+                : '<tr><td colspan="9" class="empty-message">No tickets found</td></tr>';
 
-            // Open Tickets
             document.getElementById('openBody').innerHTML = open.length > 0 
                 ? open.map(renderTicketRow).join('')
-                : '<tr><td colspan="8" class="empty-message">No open tickets</td></tr>';
+                : '<tr><td colspan="7" class="empty-message">No open tickets</td></tr>';
 
-            // Closed Tickets
             document.getElementById('closedBody').innerHTML = closed.length > 0 
                 ? closed.map(renderTicketRow).join('')
-                : '<tr><td colspan="8" class="empty-message">No closed tickets</td></tr>';
+                : '<tr><td colspan="7" class="empty-message">No closed tickets</td></tr>';
         }
 
         function renderTeamSection() {
@@ -685,11 +700,9 @@
         }
 
         function switchTab(tab) {
-            // Hide all sections
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             
-            // Show selected section
             document.getElementById(tab + 'Section').classList.add('active');
             event.target.classList.add('active');
         }
@@ -705,82 +718,64 @@
             document.getElementById('assignModal').classList.remove('active');
         }
 
-        // ✨ Toggle Status Button - שינוי סטטוס עם לחיצה
         async function toggleStatusButton(ticketId, currentStatus) {
             const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
             
-            try {
-                const res = await fetch('/api/tickets/status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ticketId, status: newStatus})
-                });
-                
-                const data = await res.json();
+            fetch('/api/tickets/status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ticketId, status: newStatus})
+            })
+            .then(res => res.json())
+            .then(data => {
                 if (data.ok) {
+                    showToast('✓ Status updated', 'success');
                     loadData();
                 } else {
-                    alert('Error updating status');
+                    showToast('Error updating status', 'error');
                 }
-            } catch(e) {
+            })
+            .catch(e => {
+                showToast('Error updating status', 'error');
                 console.error('Error:', e);
-                alert('Error updating status');
-            }
+            });
         }
 
-        // ✨ Assign Ticket with Auto Email
         async function assignTicket() {
             const ticketId = document.getElementById('assignTicketId').value;
             const selectElement = document.getElementById('assignTo');
             const assignTo = selectElement.value;
             
-            // משוך את האימייל מ-data-email
             const selectedOption = Array.from(selectElement.options).find(opt => opt.value === assignTo);
             const email = selectedOption?.dataset.email || '';
 
             if (!assignTo || !email) {
-                alert('Please select an employee');
+                showToast('Please select an employee', 'error');
                 return;
             }
 
-            try {
-                const res = await fetch('/api/tickets/assign', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ticketId, assignedTo: assignTo, email})
-                });
+            closeModal();
+            showToast('📬 Assigning ticket...', 'success');
 
-                const data = await res.json();
+            // ✨ Async - don't wait
+            fetch('/api/tickets/assign', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ticketId, assignedTo: assignTo, email})
+            })
+            .then(res => res.json())
+            .then(data => {
                 if (data.ok) {
-                    alert('✓ Ticket assigned and email sent!');
-                    closeModal();
+                    showToast('✓ Ticket assigned and email sent!', 'success');
                     loadData();
                 } else {
-                    alert('Error assigning ticket');
+                    showToast('Error assigning ticket', 'error');
                 }
-            } catch(e) {
-                console.error('Error:', e);
-                alert('Error assigning ticket');
-            }
-        }
-
-        function viewPhoto(mediaId) {
-            if (mediaId.startsWith('http')) {
-                document.getElementById('photoImage').src = mediaId;
-                document.getElementById('photoModal').classList.add('active');
-            } else if (mediaId.startsWith('whatsapp-media-id:')) {
-                fetch('/api/download-image?mediaId=' + mediaId)
-                    .then(res => res.json())
-                    .then(data => {
-                        document.getElementById('photoImage').src = data.url;
-                        document.getElementById('photoModal').classList.add('active');
-                    })
-                    .catch(err => alert('Cannot load photo'));
-            }
-        }
-
-        function closePhotoModal() {
-            document.getElementById('photoModal').classList.remove('active');
+            })
+            .catch(err => {
+                showToast('Error assigning ticket', 'error');
+                console.error('Error:', err);
+            });
         }
 
         loadData();
