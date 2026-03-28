@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Dashboard</title>
+    <title>CEO Dashboard - Bamakor</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 1200px; margin: auto; }
+        .container { max-width: 1400px; margin: auto; }
         header {
             background: rgba(255,255,255,0.95);
             padding: 30px;
@@ -23,10 +23,10 @@
             align-items: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        h1 { color: #333; margin: 0; }
+        h1 { color: #333; }
         .stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -35,15 +35,18 @@
             padding: 25px;
             border-radius: 15px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
         }
-        .stat-label { color: #999; font-size: 14px; }
-        .stat-number { font-size: 32px; font-weight: bold; color: #667eea; }
-        table {
-            width: 100%;
+        .stat-label { color: #999; font-size: 14px; margin-bottom: 10px; }
+        .stat-number { font-size: 36px; font-weight: bold; color: #667eea; }
+        .table-wrapper {
             background: white;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
             border-collapse: collapse;
         }
         th {
@@ -57,22 +60,41 @@
             border-bottom: 1px solid #f0f0f0;
         }
         tr:hover { background: #f8f9ff; }
-        .btn {
-            background: #667eea;
-            color: white;
+        .status-btn {
+            padding: 8px 16px;
             border: none;
-            padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
         }
+        .status-open {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .status-closed {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .btn { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
         .btn:hover { background: #764ba2; }
+        .loading { text-align: center; padding: 40px; }
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🔧 Ticket Dashboard</h1>
-            <button class="btn" onclick="location.reload()">🔄 Refresh</button>
+            <h1>🔧 Bamakor Dashboard</h1>
+            <button class="btn" onclick="loadData()">🔄 Refresh</button>
         </header>
 
         <div class="stats">
@@ -90,26 +112,40 @@
             </div>
         </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Ticket ID</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-            <tbody id="tbody">
-                <tr><td colspan="3" style="text-align:center">Loading...</td></tr>
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticket ID</th>
+                        <th>Phone</th>
+                        <th>Street</th>
+                        <th>Building</th>
+                        <th>Apartment</th>
+                        <th>Issue</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody">
+                    <tr class="loading"><td colspan="8"><div class="spinner"></div>Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        async function load() {
+        async function loadData() {
             try {
                 const res = await fetch('/api/tickets');
                 const data = await res.json();
-                const tickets = data.tickets || [];
+                
+                console.log('Response:', data); // Debug
+                
+                if (!data.ok || !data.tickets) {
+                    throw new Error('Invalid response format');
+                }
+
+                const tickets = data.tickets;
                 
                 document.getElementById('total').textContent = tickets.length;
                 document.getElementById('open').textContent = tickets.filter(t => t.status === 'פתוח').length;
@@ -117,29 +153,48 @@
                 
                 document.getElementById('tbody').innerHTML = tickets.map(t => `
                     <tr>
-                        <td>${t.ticketId}</td>
-                        <td>${t.status}</td>
-                        <td><button class="btn" onclick="updateStatus('${t.ticketId}', '${t.status}')">Toggle</button></td>
+                        <td><strong>${t.ticketId}</strong></td>
+                        <td>${t.phone}</td>
+                        <td>${t.street}</td>
+                        <td>${t.building}</td>
+                        <td>${t.apartment}</td>
+                        <td>${t.issue}</td>
+                        <td>
+                            <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}">
+                                ${t.status === 'סגור' ? '✓ Closed' : '⏳ Open'}
+                            </button>
+                        </td>
+                        <td><button class="btn" onclick="toggleStatus('${t.ticketId}', '${t.status}')">Toggle</button></td>
                     </tr>
                 `).join('');
             } catch(e) {
-                console.error(e);
-                document.getElementById('tbody').innerHTML = '<tr><td colspan="3">Error loading data</td></tr>';
+                console.error('Error:', e);
+                document.getElementById('tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;">Error loading data</td></tr>';
             }
         }
 
-        async function updateStatus(id, status) {
+        async function toggleStatus(id, status) {
             const newStatus = status === 'סגור' ? 'פתוח' : 'סגור';
-            await fetch('/api/tickets/status', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ticketId: id, status: newStatus})
-            });
-            load();
+            try {
+                const res = await fetch('/api/tickets/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ticketId: id, status: newStatus})
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    loadData();
+                } else {
+                    alert('Error updating status');
+                }
+            } catch(e) {
+                console.error('Error:', e);
+                alert('Error updating status');
+            }
         }
 
-        load();
-        setInterval(load, 600000);
+        loadData();
+        setInterval(loadData, 600000); // Refresh every 10 minutes
     </script>
 </body>
 </html>
