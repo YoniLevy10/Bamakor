@@ -1,134 +1,64 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bamakor Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #FFFFFF;
+            font-family: Arial, sans-serif;
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .toggle {
+            cursor: pointer;
+            padding: 10px 20px;
+            background-color: #FF4081;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .status.good {
+            background-color: #4CAF50;
+        }
+        .status.bad {
+            background-color: #F44336;
+        }
+        .status.warning {
+            background-color: #FF9800;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 text-slate-900">
-  <div class="max-w-7xl mx-auto p-6">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-3xl font-bold">Bamakor Dashboard</h1>
-        <p class="text-slate-500">מערכת ניהול תקלות לבניינים</p>
-      </div>
-      <button onclick="loadTickets()" class="bg-black text-white px-4 py-2 rounded-xl">רענן</button>
+<body>
+    <h1>Dashboard</h1>
+    <button class="toggle">Toggle Dark Mode</button>
+    <div id="status-indicators">
+        <div class="status good">All Systems Operational</div>
+        <div class="status warning">Warning: High CPU Usage</div>
+        <div class="status bad">Error: Database Connection Lost</div>
     </div>
+    <script>
+        const toggle = document.querySelector('.toggle');
+        toggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark');
+            const bgColor = document.body.classList.contains('dark') ? '#121212' : '#FFFFFF';
+            const textColor = document.body.classList.contains('dark') ? '#FFFFFF' : '#000000';
+            document.body.style.backgroundColor = bgColor;
+            document.body.style.color = textColor;
+        });
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div class="bg-white rounded-2xl shadow p-4">
-        <div class="text-sm text-slate-500">סה״כ פניות</div>
-        <div id="totalCount" class="text-3xl font-bold mt-2">0</div>
-      </div>
-      <div class="bg-white rounded-2xl shadow p-4">
-        <div class="text-sm text-slate-500">פתוחות</div>
-        <div id="openCount" class="text-3xl font-bold mt-2 text-red-600">0</div>
-      </div>
-      <div class="bg-white rounded-2xl shadow p-4">
-        <div class="text-sm text-slate-500">סגורות</div>
-        <div id="closedCount" class="text-3xl font-bold mt-2 text-green-600">0</div>
-      </div>
-    </div>
+        function refreshData() {
+            // Add logic to refresh the dashboard data
+            console.log('Data refreshed');
+        }
 
-    <div class="bg-white rounded-2xl shadow p-4 mb-6">
-      <input id="searchInput" type="text" placeholder="חיפוש לפי מספר פנייה / רחוב / תקלה" class="border rounded-xl px-4 py-2 w-full" oninput="renderTable()" />
-    </div>
-
-    <div class="bg-white rounded-2xl shadow overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="bg-slate-900 text-white">
-            <tr>
-              <th class="p-3 text-right">סטטוס</th>
-              <th class="p-3 text-right">מספר פנייה</th>
-              <th class="p-3 text-right">רחוב</th>
-              <th class="p-3 text-right">בניין</th>
-              <th class="p-3 text-right">דירה</th>
-              <th class="p-3 text-right">תקלה</th>
-              <th class="p-3 text-right">צילום</th>
-            </tr>
-          </thead>
-          <tbody id="ticketsTable" class="divide-y divide-slate-200 bg-white"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let tickets = [];
-
-    async function loadTickets() {
-      const res = await fetch("/api/tickets");
-      const data = await res.json();
-      tickets = data.tickets || [];
-      updateStats();
-      renderTable();
-    }
-
-    function updateStats() {
-      document.getElementById("totalCount").textContent = tickets.length;
-      document.getElementById("openCount").textContent = tickets.filter(t => t.status === "פתוח").length;
-      document.getElementById("closedCount").textContent = tickets.filter(t => t.status === "סגור").length;
-    }
-
-    function renderTable() {
-      const tbody = document.getElementById("ticketsTable");
-      const search = document.getElementById("searchInput").value.trim().toLowerCase();
-
-      const filtered = tickets.filter(ticket => {
-        const searchText = [
-          ticket.ticketId,
-          ticket.street,
-          ticket.building,
-          ticket.apartment,
-          ticket.issue
-        ].join(" ").toLowerCase();
-
-        return !search || searchText.includes(search);
-      });
-
-      tbody.innerHTML = filtered.map(ticket => `
-        <tr>
-          <td class="p-3">
-            <button
-              onclick="toggleStatus('${ticket.ticketId}', '${ticket.status}')"
-              class="text-xl"
-              title="שנה סטטוס"
-            >
-              ${ticket.status === "סגור" ? "☑️" : "⬜"}
-            </button>
-          </td>
-          <td class="p-3 font-semibold">${ticket.ticketId || ""}</td>
-          <td class="p-3">${ticket.street || ""}</td>
-          <td class="p-3">${ticket.building || ""}</td>
-          <td class="p-3">${ticket.apartment || ""}</td>
-          <td class="p-3">${ticket.issue || ""}</td>
-          <td class="p-3">
-            ${ticket.imageUrl ? `<span class="text-blue-600">${ticket.imageUrl}</span>` : "-"}
-          </td>
-        </tr>
-      `).join("");
-    }
-
-    async function toggleStatus(ticketId, currentStatus) {
-      const newStatus = currentStatus === "סגור" ? "פתוח" : "סגור";
-
-      await fetch("/api/tickets/status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ticketId,
-          status: newStatus
-        })
-      });
-
-      await loadTickets();
-    }
-
-    loadTickets();
-  </script>
+        setInterval(refreshData, 10 * 60 * 1000); // Refresh every 10 minutes
+    </script>
 </body>
 </html>
