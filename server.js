@@ -18,18 +18,17 @@ const sessions = new Map();
 // מניעת עיבוד כפול של אותה הודעה
 const processedMessages = new Set();
 
-// Setup Email Transporter
+// ✨ Setup Email Transporter - Gmail port 465
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
     user: EMAIL_USER,
     pass: EMAIL_PASSWORD
   }
 });
 
-/**
- * ROOT - מגיש את הדשבורד מהשורש של הפרויקט
- */
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "dashboard.html"));
 });
@@ -110,7 +109,7 @@ app.get("/api/tickets", async (req, res) => {
 });
 
 /**
- * שליפת רשימת עובדים מ-Google Sheets
+ * ✨ שליפת רשימת עובדים מ-Google Sheets
  */
 app.get("/api/employees", async (req, res) => {
   try {
@@ -175,13 +174,7 @@ app.post("/api/tickets/status", async (req, res) => {
 });
 
 /**
- * הקצאת פנייה לעובד ושליחת מייל
- * מצפה לקבל:
- * {
- *   ticketId: "BMK-123456",
- *   assignedTo: "שם העובד",
- *   email: "worker@example.com"
- * }
+ * ✨ הקצאת פנייה לעובד ושליחת מייל
  */
 app.post("/api/tickets/assign", async (req, res) => {
   try {
@@ -217,7 +210,7 @@ app.post("/api/tickets/assign", async (req, res) => {
       });
     }
 
-    // שלח מייל
+    // ✨ שלח מייל
     const mailOptions = {
       from: EMAIL_USER,
       to: email,
@@ -266,6 +259,7 @@ app.post("/api/tickets/assign", async (req, res) => {
           error: "Ticket assigned but email failed to send"
         });
       }
+      console.log("Email sent:", info.response);
       res.json({
         ok: true,
         message: "Ticket assigned and email sent successfully"
@@ -279,7 +273,7 @@ app.post("/api/tickets/assign", async (req, res) => {
 });
 
 /**
- * הורדת תמונה מ-WhatsApp
+ * ✨ הורדת תמונה מ-WhatsApp
  */
 app.get("/api/download-image", async (req, res) => {
   try {
@@ -302,7 +296,6 @@ app.get("/api/download-image", async (req, res) => {
     if (mediaId.startsWith('whatsapp-media-id:')) {
       const actualMediaId = mediaId.replace('whatsapp-media-id:', '');
       
-      // קרא ל-Meta API להשיג את URL התמונה
       const mediaResponse = await fetch(
         `https://graph.instagram.com/v18.0/${actualMediaId}/?access_token=${WHATSAPP_TOKEN}`
       );
