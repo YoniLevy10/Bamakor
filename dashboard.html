@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Bamakor Ticket Management System">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23667eea' width='192' height='192'/><text x='50%' y='50%' font-size='100' fill='white' text-anchor='middle' dy='.3em'>🔧</text></svg>">
     <title>CEO Dashboard - Bamakor</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,6 +48,7 @@
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow-x: auto;
         }
         table {
             width: 100%;
@@ -88,6 +93,24 @@
             margin: 0 auto 20px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 20px;
+            }
+            h1 { font-size: 24px; }
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            table { font-size: 12px; }
+            td, th { padding: 10px 8px; }
+            .stat-number { font-size: 28px; }
+            .btn { padding: 8px 12px; font-size: 12px; }
+        }
     </style>
 </head>
 <body>
@@ -134,12 +157,17 @@
     </div>
 
     <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
+        }
+
         async function loadData() {
             try {
                 const res = await fetch('/api/tickets');
                 const data = await res.json();
                 
-                console.log('Response:', data); // Debug
+                console.log('Response:', data);
                 
                 if (!data.ok || !data.tickets) {
                     throw new Error('Invalid response format');
@@ -194,7 +222,7 @@
         }
 
         loadData();
-        setInterval(loadData, 600000); // Refresh every 10 minutes
+        setInterval(loadData, 600000);
     </script>
 </body>
 </html>
