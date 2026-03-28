@@ -4,61 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <style>
-        body {
-            background-color: #121212;
-            color: #FFFFFF;
-            font-family: Arial, sans-serif;
-            transition: background-color 0.5s, color 0.5s;
-        }
-        .toggle {
-            cursor: pointer;
-            padding: 10px 20px;
-            background-color: #FF4081;
-            border: none;
-            border-radius: 5px;
-            color: white;
-        }
-        .status {
-            padding: 10px;
-            border-radius: 5px;
-            transition: background-color 0.3s;
-        }
-        .status.good {
-            background-color: #4CAF50;
-        }
-        .status.bad {
-            background-color: #F44336;
-        }
-        .status.warning {
-            background-color: #FF9800;
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="script.js" defer></script>
 </head>
 <body>
-    <h1>Dashboard</h1>
-    <button class="toggle">Toggle Dark Mode</button>
-    <div id="status-indicators">
-        <div class="status good">All Systems Operational</div>
-        <div class="status warning">Warning: High CPU Usage</div>
-        <div class="status bad">Error: Database Connection Lost</div>
+    <div class="dashboard">
+        <header>
+            <h1>Ticket Dashboard</h1>
+            <button id="darkModeToggle">Toggle Dark Mode</button>
+            <input type="text" id="search" placeholder="Search tickets...">
+        </header>
+        <section class="kpis">
+            <div class="kpi" id="totalTickets">Total Tickets: 0</div>
+            <div class="kpi" id="openTickets">Open Tickets: 0</div>
+            <div class="kpi" id="closedTickets">Closed Tickets: 0</div>
+        </section>
+        <table id="ticketTable">
+            <thead>
+                <tr>
+                    <th>Ticket ID</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Tickets will be populated here -->
+            </tbody>
+        </table>
     </div>
+
     <script>
-        const toggle = document.querySelector('.toggle');
-        toggle.addEventListener('click', () => {
-            document.body.classList.toggle('dark');
-            const bgColor = document.body.classList.contains('dark') ? '#121212' : '#FFFFFF';
-            const textColor = document.body.classList.contains('dark') ? '#FFFFFF' : '#000000';
-            document.body.style.backgroundColor = bgColor;
-            document.body.style.color = textColor;
-        });
+        const fetchTickets = async () => {
+            const response = await fetch('/api/tickets');
+            const tickets = await response.json();
+            updateDashboard(tickets);
+        };
 
-        function refreshData() {
-            // Add logic to refresh the dashboard data
-            console.log('Data refreshed');
-        }
+        const updateDashboard = (tickets) => {
+            document.getElementById('totalTickets').innerText = 'Total Tickets: ' + tickets.length;
+            const openCount = tickets.filter(ticket => ticket.status === 'open').length;
+            const closedCount = tickets.filter(ticket => ticket.status === 'closed').length;
+            document.getElementById('openTickets').innerText = 'Open Tickets: ' + openCount;
+            document.getElementById('closedTickets').innerText = 'Closed Tickets: ' + closedCount;
+            const tbody = document.getElementById('ticketTable').getElementsByTagName('tbody')[0];
+            tbody.innerHTML = '';
+            tickets.forEach(ticket => {
+                const row = tbody.insertRow();
+                row.insertCell(0).innerText = ticket.id;
+                row.insertCell(1).innerText = ticket.title;
+                const statusCell = row.insertCell(2);
+                statusCell.innerText = ticket.status;
+                statusCell.onclick = () => updateTicketStatus(ticket.id);
+            });
+        };
 
-        setInterval(refreshData, 10 * 60 * 1000); // Refresh every 10 minutes
+        const updateTicketStatus = async (ticketId) => {
+            // Logic to update ticket status
+            // Example: Make a PUT request to update the ticket status
+            // const response = await fetch(`/api/tickets/${ticketId}`, { method: 'PUT', body: JSON.stringify(newStatus) });
+            // fetchTickets();
+        };
+
+        // Fetch tickets every 10 minutes
+        setInterval(fetchTickets, 600000);
+        fetchTickets();
+
+        document.getElementById('darkModeToggle').onclick = () => {
+            document.body.classList.toggle('dark-mode');
+        };
     </script>
 </body>
 </html>
