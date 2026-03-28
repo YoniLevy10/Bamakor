@@ -5,66 +5,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Premium Dashboard</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
         }
-        h1 {
-            color: #333;
+        .container { max-width: 1200px; margin: auto; }
+        header {
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        .dashboard {
-            background-color: #fff;
+        h1 { color: #333; margin: 0; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .stat-label { color: #999; font-size: 14px; }
+        .stat-number { font-size: 32px; font-weight: bold; color: #667eea; }
+        table {
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-collapse: collapse;
+        }
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        tr:hover { background: #f8f9ff; }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px;
+            cursor: pointer;
         }
-        .ticket {
-            border-bottom: 1px solid #ccc;
-            padding: 10px 0;
-        }
-        .status {
-            margin-top: 10px;
-        }
+        .btn:hover { background: #764ba2; }
     </style>
 </head>
 <body>
-    <div class="dashboard">
-        <h1>Premium Dashboard</h1>
-        <div id="ticket-container"></div>
+    <div class="container">
+        <header>
+            <h1>🔧 Ticket Dashboard</h1>
+            <button class="btn" onclick="location.reload()">🔄 Refresh</button>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Tickets</div>
+                <div class="stat-number" id="total">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Open</div>
+                <div class="stat-number" id="open">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Closed</div>
+                <div class="stat-number" id="closed">0</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Ticket ID</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="tbody">
+                <tr><td colspan="3" style="text-align:center">Loading...</td></tr>
+            </tbody>
+        </table>
     </div>
+
     <script>
-        async function fetchTickets() {
-            const response = await fetch('/api/tickets');
-            const tickets = await response.json();
-            return tickets;
+        async function load() {
+            try {
+                const res = await fetch('/api/tickets');
+                const data = await res.json();
+                const tickets = data.tickets || [];
+                
+                document.getElementById('total').textContent = tickets.length;
+                document.getElementById('open').textContent = tickets.filter(t => t.status === 'פתוח').length;
+                document.getElementById('closed').textContent = tickets.filter(t => t.status === 'סגור').length;
+                
+                document.getElementById('tbody').innerHTML = tickets.map(t => `
+                    <tr>
+                        <td>${t.ticketId}</td>
+                        <td>${t.status}</td>
+                        <td><button class="btn" onclick="updateStatus('${t.ticketId}', '${t.status}')">Toggle</button></td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                console.error(e);
+                document.getElementById('tbody').innerHTML = '<tr><td colspan="3">Error loading data</td></tr>';
+            }
         }
 
-        async function updateTicketStatus(ticketId, status) {
-            await fetch(`/api/tickets/${ticketId}/status`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ status }),
+        async function updateStatus(id, status) {
+            const newStatus = status === 'סגור' ? 'פתוח' : 'סגור';
+            await fetch('/api/tickets/status', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ticketId: id, status: newStatus})
             });
-            loadTickets(); // Reload tickets after update
+            load();
         }
 
-        async function loadTickets() {
-            const tickets = await fetchTickets();
-            const container = document.getElementById('ticket-container');
-            container.innerHTML = '';
-            tickets.forEach(ticket => {
-                const ticketDiv = document.createElement('div');
-                ticketDiv.className = 'ticket';
-                ticketDiv.innerHTML = `<strong>Ticket #${ticket.id}</strong>: ${ticket.description}<div class='status'>Status: ${ticket.status} <button onclick="updateTicketStatus(${ticket.id}, 'resolved')">Resolve</button></div>`;
-                container.appendChild(ticketDiv);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', loadTickets);
+        load();
+        setInterval(load, 600000);
     </script>
 </body>
 </html>
