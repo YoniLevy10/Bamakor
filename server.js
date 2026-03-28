@@ -1,6 +1,5 @@
 const express = require("express");
 const path = require("path");
-const nodemailer = require("nodemailer");
 
 const app = express();
 app.use(express.json());
@@ -10,24 +9,11 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 
 // זיכרון זמני לניהול שיחה לפי טלפון
 const sessions = new Map();
 // מניעת עיבוד כפול של אותה הודעה
 const processedMessages = new Set();
-
-// ✨ Setup Email Transporter - Gmail port 465
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASSWORD
-  }
-});
 
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "dashboard.html"));
@@ -109,7 +95,7 @@ app.get("/api/tickets", async (req, res) => {
 });
 
 /**
- * ✨ שליפת רשימת עובדים מ-Google Sheets
+ * ✨ שליפת רשימת עובדים
  */
 app.get("/api/employees", async (req, res) => {
   try {
@@ -174,20 +160,28 @@ app.post("/api/tickets/status", async (req, res) => {
 });
 
 /**
- * ✨ הקצאת פנייה לעובד ושליחת מייל
+ * ✨ הקצאת פנייה לעובד ושליחת מייל דרך Google Apps Script
  */
 app.post("/api/tickets/assign", async (req, res) => {
   try {
     const { ticketId, assignedTo, email } = req.body || {};
 
+    console.log("🔵 Assign request received:", { ticketId, assignedTo, email });
+
     if (!ticketId || !assignedTo || !email) {
+      console.log("❌ Missing fields");
       return res.status(400).json({
         ok: false,
         error: "Missing ticketId, assignedTo, or email"
       });
     }
 
+    if (!APPS_SCRIPT_URL) {
+      return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
+    }
+
     // עדכן ב-Google Sheets
+    console.log("📊 Updating Google Sheets...");
     const updateResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: {
@@ -204,114 +198,49 @@ app.post("/api/tickets/assign", async (req, res) => {
     const updateData = await updateResponse.json();
 
     if (!updateData.ok) {
+      console.log("❌ Sheet update failed:", updateData);
       return res.status(400).json({
         ok: false,
         error: updateData.error || "Failed to assign ticket"
       });
     }
 
-    // ✨ שלח מייל
-    const mailOptions = {
-      from: EMAIL_USER,
-      to: email,
-      subject: `🔧 הוקצאה לך משימה לטיפול - ${ticketId}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; direction: rtl; text-align: right; background: #f5f5f5; padding: 20px;">
-          <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto;">
-            <div style="border-left: 5px solid #C41E3A; padding-left: 20px; margin-bottom: 20px;">
-              <h2 style="color: #3F3F3F; margin: 0 0 10px 0;">שלום ${assignedTo}! 👋</h2>
-              <p style="color: #666; margin: 0;">הוקצאה לך משימה חדשה לטיפול</p>
-            </div>
-            
-            <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-              <p style="color: #666; margin: 5px 0;">
-                <strong>מספר משימה:</strong> <span style="color: #C41E3A; font-weight: bold; font-size: 16px;">${ticketId}</span>
-              </p>
-              <p style="color: #666; margin: 5px 0;">
-                <strong>תאריך הקצאה:</strong> ${new Date().toLocaleString('he-IL')}
-              </p>
-            </div>
-            
-            <p style="color: #666; margin-bottom: 20px;">אנא בדוק בדשבורד לפרטים נוספים על המשימה.</p>
-            
-            <div style="text-align: center;">
-              <a href="https://bamakor.onrender.com/" style="background: #C41E3A; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: 600;">
-                📊 עבור לדשבורד
-              </a>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-            
-            <p style="color: #999; font-size: 12px; margin: 0; text-align: center;">
-              מערכת ניהול משימות Bamakor<br>
-              bamakor.com
-            </p>
-          </div>
-        </div>
-      `
-    };
+    console.log("✅ Sheet updated, sending email...");
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Email error:", error);
-        return res.status(500).json({
-          ok: false,
-          error: "Ticket assigned but email failed to send"
-        });
-      }
-      console.log("Email sent:", info.response);
-      res.json({
-        ok: true,
-        message: "Ticket assigned and email sent successfully"
+    // ✨ שלח מייל דרך Google Apps Script (חינמי וללא הגבלה)
+    console.log("📧 Sending email via Apps Script...");
+    const emailResponse = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "sendEmail",
+        email,
+        assignedTo,
+        ticketId
+      })
+    });
+
+    const emailData = await emailResponse.json();
+
+    if (!emailData.ok) {
+      console.error("❌ Email send failed:", emailData);
+      return res.status(500).json({
+        ok: false,
+        error: "Ticket assigned but email failed"
       });
+    }
+
+    console.log("✅ Email sent successfully");
+    res.json({
+      ok: true,
+      message: "Ticket assigned and email sent successfully"
     });
 
   } catch (error) {
-    console.error("POST /api/tickets/assign error:", error);
+    console.error("❌ POST /api/tickets/assign error:", error);
     res.status(500).json({ ok: false, error: error.message });
-  }
-});
-
-/**
- * ✨ הורדת תמונה מ-WhatsApp
- */
-app.get("/api/download-image", async (req, res) => {
-  try {
-    const mediaId = req.query.mediaId;
-    
-    if (!mediaId) {
-      return res.status(400).json({ error: "Missing mediaId" });
-    }
-
-    if (!WHATSAPP_TOKEN) {
-      return res.status(500).json({ error: "Missing WHATSAPP_TOKEN" });
-    }
-
-    // אם זה כבר URL
-    if (mediaId.startsWith('http')) {
-      return res.json({ url: mediaId });
-    }
-
-    // אם זה whatsapp-media-id
-    if (mediaId.startsWith('whatsapp-media-id:')) {
-      const actualMediaId = mediaId.replace('whatsapp-media-id:', '');
-      
-      const mediaResponse = await fetch(
-        `https://graph.instagram.com/v18.0/${actualMediaId}/?access_token=${WHATSAPP_TOKEN}`
-      );
-
-      if (!mediaResponse.ok) {
-        return res.status(400).json({ error: "Failed to fetch media" });
-      }
-
-      const mediaData = await mediaResponse.json();
-      return res.json({ url: mediaData.media_object?.image || null });
-    }
-
-    res.status(400).json({ error: "Invalid mediaId format" });
-  } catch (error) {
-    console.error("GET /api/download-image error:", error);
-    res.status(500).json({ error: error.message });
   }
 });
 
