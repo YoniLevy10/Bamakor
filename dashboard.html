@@ -155,12 +155,13 @@
         tr:hover { background: #f8f8f8; }
         
         .status-btn {
-            padding: 6px 12px;
+            padding: 8px 16px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
             font-size: 12px;
+            transition: all 0.3s ease;
         }
         
         .status-open {
@@ -168,9 +169,23 @@
             color: #C41E3A;
         }
         
+        .status-open:hover {
+            background: #FFD6D6;
+            color: #A01730;
+            transform: scale(1.05);
+            box-shadow: 0 3px 8px rgba(196, 30, 58, 0.2);
+        }
+        
         .status-closed {
             background: #E8F5E9;
             color: #2E7D32;
+        }
+        
+        .status-closed:hover {
+            background: #D1F0D1;
+            color: #1B5E20;
+            transform: scale(1.05);
+            box-shadow: 0 3px 8px rgba(46, 125, 50, 0.2);
         }
         
         .action-btn {
@@ -183,10 +198,12 @@
             font-size: 12px;
             font-weight: 600;
             margin-right: 5px;
+            transition: all 0.3s;
         }
         
         .action-btn:hover {
             background: #A01730;
+            box-shadow: 0 3px 8px rgba(196, 30, 58, 0.3);
         }
         
         .empty-message {
@@ -376,7 +393,6 @@
             header { padding: 10px; }
             h1 { font-size: 18px; }
             
-            /* Hide columns on small phones */
             .col-phone,
             .col-street,
             .col-building,
@@ -521,7 +537,6 @@
             <select id="assignTo">
                 <option value="">Select Employee...</option>
             </select>
-            <input type="email" id="assignEmail" placeholder="📧 Employee Email">
             <div class="modal-buttons">
                 <button class="btn" style="background: #999;" onclick="closeModal()">Cancel</button>
                 <button class="btn" onclick="assignTicket()">✓ Assign & Send Email</button>
@@ -592,7 +607,7 @@
             });
 
             if (filter === 'open') {
-                filtered = filtered.filter(t => t.status === 'פת��ח');
+                filtered = filtered.filter(t => t.status === 'פתוח');
             } else if (filter === 'closed') {
                 filtered = filtered.filter(t => t.status === 'סגור');
             }
@@ -610,7 +625,7 @@
                     <td class="col-apartment">${t.apartment}</td>
                     <td>${t.issue}</td>
                     <td>
-                        <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}">
+                        <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
                             ${t.status === 'סגור' ? '✓ Closed' : '⏳ Open'}
                         </button>
                     </td>
@@ -690,11 +705,38 @@
             document.getElementById('assignModal').classList.remove('active');
         }
 
+        // ✨ Toggle Status Button - שינוי סטטוס עם לחיצה
+        async function toggleStatusButton(ticketId, currentStatus) {
+            const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
+            
+            try {
+                const res = await fetch('/api/tickets/status', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ticketId, status: newStatus})
+                });
+                
+                const data = await res.json();
+                if (data.ok) {
+                    loadData();
+                } else {
+                    alert('Error updating status');
+                }
+            } catch(e) {
+                console.error('Error:', e);
+                alert('Error updating status');
+            }
+        }
+
+        // ✨ Assign Ticket with Auto Email
         async function assignTicket() {
             const ticketId = document.getElementById('assignTicketId').value;
             const selectElement = document.getElementById('assignTo');
             const assignTo = selectElement.value;
-            const email = Array.from(selectElement.options).find(opt => opt.value === assignTo)?.dataset.email || '';
+            
+            // משוך את האימייל מ-data-email
+            const selectedOption = Array.from(selectElement.options).find(opt => opt.value === assignTo);
+            const email = selectedOption?.dataset.email || '';
 
             if (!assignTo || !email) {
                 alert('Please select an employee');
@@ -723,12 +765,10 @@
         }
 
         function viewPhoto(mediaId) {
-            // אם יש URL ישיר
             if (mediaId.startsWith('http')) {
                 document.getElementById('photoImage').src = mediaId;
                 document.getElementById('photoModal').classList.add('active');
             } else if (mediaId.startsWith('whatsapp-media-id:')) {
-                // קרא לשרת להוריד את התמונה
                 fetch('/api/download-image?mediaId=' + mediaId)
                     .then(res => res.json())
                     .then(data => {
