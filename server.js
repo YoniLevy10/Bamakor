@@ -17,36 +17,13 @@ const VERIFY_TOKEN = '12345';
 
 console.log(`\n🚀 ========== BAMAKOR SERVER ==========`);
 console.log(`📍 Port: ${PORT}`);
-console.log(`✅ Security: Enabled (Helmet + Rate Limit + CORS)`);
+console.log(`✅ Security: Enabled (Helmet + CORS)`);
 console.log(`✅ Compression: Enabled`);
-console.log(`✅ Caching: Enabled`);
-console.log(`✅ Error Logging: Enabled`);
+console.log(`✅ WhatsApp: Configured`);
 console.log(`=====================================\n`);
 
 const sessions = new Map();
 const processedMessages = new Set();
-
-// ========== CACHING SYSTEM ==========
-const cache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 דקות
-
-function getFromCache(key) {
-  if (cache.has(key)) {
-    const cached = cache.get(key);
-    if (Date.now() - cached.timestamp < CACHE_TTL) {
-      return cached.data;
-    }
-    cache.delete(key);
-  }
-  return null;
-}
-
-function setInCache(key, data) {
-  cache.set(key, {
-    data,
-    timestamp: Date.now()
-  });
-}
 
 // ========== RATE LIMITING ==========
 const rateLimitStore = new Map();
@@ -89,7 +66,7 @@ app.use((req, res, next) => {
 
 // ========== MIDDLEWARE - CORS ==========
 app.use((req, res, next) => {
-  const allowedOrigins = ['http://localhost:3000', 'http://localhost', 'http://127.0.0.1:3000'];
+  const allowedOrigins = ['http://localhost:3000', 'http://localhost', 'http://127.0.0.1:3000', 'https://bamakor.onrender.com'];
   const origin = req.headers.origin;
 
   if (allowedOrigins.includes(origin) || !req.headers.origin) {
@@ -118,16 +95,12 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email));
 }
 
-function validatePhone(phone) {
-  return /^\d{9,15}$/.test(String(phone).replace(/\D/g, ''));
-}
-
 function sanitizeInput(input) {
   if (typeof input !== 'string') return '';
   return input
     .replace(/[<>{}]/g, '')
     .trim()
-    .substring(0, 500); // Max 500 chars
+    .substring(0, 500);
 }
 
 function validateString(input, minLength = 1, maxLength = 500) {
@@ -154,7 +127,6 @@ function logError(error, context, request = null) {
 
   errorLogs.push(errorRecord);
 
-  // Keep only last 100 errors
   if (errorLogs.length > 100) {
     errorLogs.shift();
   }
@@ -175,26 +147,14 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     ok: true,
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    cacheSize: cache.size,
-    errorCount: errorLogs.length
+    uptime: process.uptime()
   });
-});
-
-app.get("/api/logs", (req, res) => {
-  res.json({ ok: true, logs: errorLogs.slice(-20) });
 });
 
 // ========== API ENDPOINTS ==========
 
 app.get("/api/tickets", async (req, res) => {
   try {
-    // Check cache first
-    const cached = getFromCache('tickets');
-    if (cached) {
-      return res.json(cached);
-    }
-
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listTickets`);
     
     if (!response.ok) {
@@ -204,7 +164,6 @@ app.get("/api/tickets", async (req, res) => {
     const data = await response.json();
 
     if (data.ok && data.tickets) {
-      // Validate tickets data
       data.tickets = data.tickets.map(t => ({
         ticketId: sanitizeInput(t.ticketId),
         phone: sanitizeInput(t.phone),
@@ -218,9 +177,6 @@ app.get("/api/tickets", async (req, res) => {
         createdAt: t.createdAt,
         closedDate: t.closedDate
       }));
-
-      // Cache the result
-      setInCache('tickets', data);
     }
 
     res.json(data);
@@ -232,12 +188,6 @@ app.get("/api/tickets", async (req, res) => {
 
 app.get("/api/employees", async (req, res) => {
   try {
-    // Check cache first
-    const cached = getFromCache('employees');
-    if (cached) {
-      return res.json(cached);
-    }
-
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listEmployees`);
     
     if (!response.ok) {
@@ -247,7 +197,6 @@ app.get("/api/employees", async (req, res) => {
     const data = await response.json();
 
     if (data.ok && data.employees) {
-      // Validate employees data
       data.employees = data.employees.map(e => ({
         name: sanitizeInput(e.name),
         email: sanitizeInput(e.email),
@@ -255,9 +204,6 @@ app.get("/api/employees", async (req, res) => {
         role: e.role || 'user',
         ticketsCount: e.ticketsCount || 0
       }));
-
-      // Cache the result
-      setInCache('employees', data);
     }
 
     res.json(data);
@@ -271,7 +217,6 @@ app.post("/api/tickets/status", async (req, res) => {
   try {
     const { ticketId, status } = req.body || {};
 
-    // Validate inputs
     if (!ticketId || !validateTicketId(ticketId)) {
       return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
@@ -279,9 +224,6 @@ app.post("/api/tickets/status", async (req, res) => {
     if (!status || !['פתוח', 'סגור'].includes(status)) {
       return res.status(400).json({ ok: false, error: "Invalid status" });
     }
-
-    // Clear cache
-    cache.delete('tickets');
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -311,7 +253,6 @@ app.post("/api/tickets/assign", async (req, res) => {
   try {
     const { ticketId, assignedTo, email } = req.body || {};
 
-    // Validate inputs
     if (!ticketId || !validateTicketId(ticketId)) {
       return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
@@ -328,9 +269,6 @@ app.post("/api/tickets/assign", async (req, res) => {
     const cleanedEmail = sanitizeInput(email);
 
     console.log(`📨 Assigning ticket ${ticketId} to ${cleanedName}`);
-
-    // Clear cache
-    cache.delete('tickets');
 
     const updateResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -389,7 +327,6 @@ app.post("/api/tickets/notes", async (req, res) => {
   try {
     const { ticketId, notes } = req.body || {};
 
-    // Validate inputs
     if (!ticketId || !validateTicketId(ticketId)) {
       return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
@@ -397,9 +334,6 @@ app.post("/api/tickets/notes", async (req, res) => {
     if (notes && !validateString(notes, 0, 1000)) {
       return res.status(400).json({ ok: false, error: "Notes too long (max 1000 chars)" });
     }
-
-    // Clear cache
-    cache.delete('tickets');
 
     const sanitizedNotes = sanitizeInput(notes || '');
 
@@ -431,13 +365,9 @@ app.post("/api/tickets/delete", async (req, res) => {
   try {
     const { ticketId } = req.body || {};
 
-    // Validate inputs
     if (!ticketId || !validateTicketId(ticketId)) {
       return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
-
-    // Clear cache
-    cache.delete('tickets');
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -654,9 +584,6 @@ async function writeTicketToSheet(data) {
     }
 
     console.log(`✅ Ticket ${data.ticketId} created via WhatsApp`);
-    
-    // Clear cache
-    cache.delete('tickets');
   } catch (error) {
     logError(error, 'writeTicketToSheet');
     throw error;
@@ -665,30 +592,57 @@ async function writeTicketToSheet(data) {
 
 async function sendWhatsAppMessage(to, messageText) {
   try {
-    const response = await fetch(
-      `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          to,
-          text: { body: messageText }
-        })
-      }
-    );
-
-    const rawText = await response.text();
-
-    if (!response.ok) {
-      throw new Error(`WhatsApp API error: ${response.status}`);
+    console.log(`\n📤 ========== SENDING WHATSAPP ==========`);
+    console.log(`📞 TO: ${to}`);
+    console.log(`📝 MESSAGE: ${messageText.substring(0, 100)}`);
+    
+    if (!WHATSAPP_TOKEN || WHATSAPP_TOKEN.length < 100) {
+      throw new Error('❌ WHATSAPP_TOKEN is not set correctly or too short!');
     }
 
-    console.log(`✅ WhatsApp message sent to ${to}`);
+    if (!PHONE_NUMBER_ID || PHONE_NUMBER_ID.length < 10) {
+      throw new Error('❌ PHONE_NUMBER_ID is invalid!');
+    }
+
+    const url = `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`;
+    
+    const payload = {
+      messaging_product: "whatsapp",
+      to: String(to),
+      text: {
+        body: String(messageText)
+      }
+    };
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${WHATSAPP_TOKEN}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const responseText = await response.text();
+    
+    console.log(`📊 Status Code: ${response.status}`);
+    console.log(`📊 Response: ${responseText}`);
+
+    if (response.status === 401) {
+      throw new Error(`❌ 401 UNAUTHORIZED - TOKEN INVALID!`);
+    }
+
+    if (response.status === 400) {
+      throw new Error(`❌ 400 BAD REQUEST - Invalid payload!`);
+    }
+
+    if (!response.ok) {
+      throw new Error(`❌ WhatsApp API error ${response.status}: ${responseText}`);
+    }
+
+    console.log(`✅ WhatsApp message sent successfully to ${to}\n`);
   } catch (error) {
+    console.error(`\n❌ WHATSAPP ERROR:`, error.message, `\n`);
     logError(error, 'sendWhatsAppMessage');
     throw error;
   }
@@ -817,5 +771,5 @@ app.listen(PORT, () => {
   console.log(`✅ Bamakor server is running on http://localhost:${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
   console.log(`📱 WhatsApp WebHook: http://localhost:${PORT}/webhook`);
-  console.log(`❤️  Health: http://localhost:${PORT}/health\n`);
+  console.log(`❤��  Health: http://localhost:${PORT}/health\n`);
 });
