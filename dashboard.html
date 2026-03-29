@@ -266,6 +266,14 @@
             background: #600000;
         }
         
+        .action-btn.restore {
+            background: #2E7D32;
+        }
+        
+        .action-btn.restore:hover {
+            background: #1B5E20;
+        }
+        
         .empty-message {
             text-align: center;
             padding: 60px 40px;
@@ -488,6 +496,16 @@
             gap: 12px;
             font-size: 12px;
             color: #999;
+            flex-wrap: wrap;
+        }
+        
+        .closed-date {
+            background: #E8F5E9;
+            color: #2E7D32;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
         }
         
         /* Toast Notification */
@@ -678,6 +696,7 @@
             <button class="tab active" onclick="switchTab('tickets')">All Tickets</button>
             <button class="tab" onclick="switchTab('open')">Open</button>
             <button class="tab" onclick="switchTab('closed')">Closed</button>
+            <button class="tab" onclick="switchTab('history')">History</button>
             <button class="tab" onclick="switchTab('team')">Team</button>
         </div>
 
@@ -766,6 +785,28 @@
             </div>
         </div>
 
+        <!-- History Section -->
+        <div id="historySection" class="section">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th class="col-phone">Phone</th>
+                            <th class="col-street">Address</th>
+                            <th>Issue</th>
+                            <th>Closed Date</th>
+                            <th>Assigned To</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr><td colspan="7" class="empty-message">No history yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Team Section -->
         <div id="teamSection" class="section">
             <div class="team-grid" id="teamGrid">
@@ -843,6 +884,7 @@
     <script>
         let allTickets = [];
         let allEmployees = [];
+        let allHistory = [];
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
@@ -874,11 +916,13 @@
                     throw new Error('Invalid response format');
                 }
 
-                allTickets = ticketsData.tickets.sort((a, b) => {
+                allTickets = ticketsData.tickets.filter(t => t.status !== 'היסטוריה').sort((a, b) => {
                     if (a.status === 'פתוח' && b.status !== 'פתוח') return -1;
                     if (a.status !== 'פתוח' && b.status === 'פתוח') return 1;
                     return 0;
                 });
+
+                allHistory = ticketsData.tickets.filter(t => t.status === 'היסטוריה') || [];
                 
                 const empRes = await fetch('/api/employees');
                 const empData = await empRes.json();
@@ -891,6 +935,7 @@
 
                 updateStats();
                 renderTickets();
+                renderHistory();
             } catch(e) {
                 console.error('Error:', e);
                 showToast('Error loading data', 'error');
@@ -924,6 +969,25 @@
             return filtered;
         }
 
+        function getFilteredHistory() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            return allHistory.filter(t => {
+                const searchText = [t.ticketId, t.phone, t.street, t.building, t.apartment, t.issue].join(' ').toLowerCase();
+                return searchText.includes(searchTerm);
+            });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
         function renderTicketRow(t) {
             return `
                 <tr>
@@ -949,6 +1013,24 @@
             `;
         }
 
+        function renderHistoryRow(t) {
+            return `
+                <tr>
+                    <td><strong>${t.ticketId}</strong></td>
+                    <td class="col-phone">${t.phone}</td>
+                    <td class="col-street">${t.street}, ${t.building}/${t.apartment}</td>
+                    <td>${t.issue}</td>
+                    <td><span class="closed-date">${formatDate(t.closedDate)}</span></td>
+                    <td>${t.assignedTo || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">View</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
         function renderTickets() {
             const all = getFilteredTickets('all');
             const open = getFilteredTickets('open');
@@ -965,6 +1047,14 @@
             document.getElementById('closedBody').innerHTML = closed.length > 0 
                 ? closed.map(renderTicketRow).join('')
                 : '<tr><td colspan="7" class="empty-message">No closed tickets</td></tr>';
+        }
+
+        function renderHistory() {
+            const history = getFilteredHistory();
+            
+            document.getElementById('historyBody').innerHTML = history.length > 0 
+                ? history.map(renderHistoryRow).join('')
+                : '<tr><td colspan="7" class="empty-message">No history yet</td></tr>';
         }
 
         function renderTeamSection() {
@@ -1003,7 +1093,10 @@
             }
         }
 
-        document.getElementById('searchInput').addEventListener('input', renderTickets);
+        document.getElementById('searchInput').addEventListener('input', () => {
+            renderTickets();
+            renderHistory();
+        });
 
         function openAssignModal(ticketId) {
             document.getElementById('assignTicketId').value = ticketId;
@@ -1015,7 +1108,7 @@
         }
 
         function openDetailsModal(ticketId) {
-            const ticket = allTickets.find(t => t.ticketId === ticketId);
+            const ticket = allTickets.find(t => t.ticketId === ticketId) || allHistory.find(t => t.ticketId === ticketId);
             if (!ticket) return;
 
             const detailsHtml = `
@@ -1037,12 +1130,18 @@
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Status</div>
-                    <div class="detail-value">${ticket.status === 'סגור' ? 'Closed' : 'Open'}</div>
+                    <div class="detail-value">${ticket.status === 'סגור' || ticket.status === 'היסטוריה' ? 'Closed' : 'Open'}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Assigned To</div>
                     <div class="detail-value">${ticket.assignedTo || 'Not assigned'}</div>
                 </div>
+                ${ticket.closedDate ? `
+                <div class="detail-item">
+                    <div class="detail-label">Closed Date</div>
+                    <div class="detail-value">${formatDate(ticket.closedDate)}</div>
+                </div>
+                ` : ''}
                 ${ticket.notes ? `
                 <div class="detail-item">
                     <div class="detail-label">Notes</div>
