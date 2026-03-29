@@ -432,6 +432,65 @@
             .stat-number { font-size: 18px; }
             .stat-label { font-size: 9px; }
         }
+
+        /* Ticket Details Modal */
+        .details-modal-content {
+            max-width: 600px;
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .details-table th {
+            background: #f5f5f5;
+            color: #3F3F3F;
+            text-align: left;
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            width: 35%;
+            border-bottom: 1px solid #eee;
+        }
+
+        .details-table td {
+            padding: 10px 15px;
+            font-size: 13px;
+            border-bottom: 1px solid #eee;
+            color: #333;
+        }
+
+        .details-table tr:last-child th,
+        .details-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .detail-photo {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 1px solid #eee;
+        }
+
+        .view-btn {
+            background: #3F3F3F;
+            margin-bottom: 5px;
+        }
+
+        .view-btn:hover {
+            background: #2a2a2a;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+        }
+
+        @media (max-width: 768px) {
+            .details-table th,
+            .details-table td {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -546,6 +605,28 @@
         </div>
     </div>
 
+    <!-- Ticket Details Modal -->
+    <div class="modal" id="ticketDetailsModal">
+        <div class="modal-content details-modal-content">
+            <h2>Ticket Details</h2>
+            <table class="details-table">
+                <tr><th>Ticket ID</th><td id="detailTicketId"></td></tr>
+                <tr><th>Phone</th><td id="detailPhone"></td></tr>
+                <tr><th>Street</th><td id="detailStreet"></td></tr>
+                <tr><th>Building</th><td id="detailBuilding"></td></tr>
+                <tr><th>Apartment</th><td id="detailApartment"></td></tr>
+                <tr><th>Issue</th><td id="detailIssue"></td></tr>
+                <tr><th>Status</th><td id="detailStatus"></td></tr>
+                <tr><th>Assigned To</th><td id="detailAssignedTo"></td></tr>
+                <tr><th>Created Date</th><td id="detailCreatedDate"></td></tr>
+            </table>
+            <div id="detailPhotoContainer"></div>
+            <div class="modal-buttons" style="margin-top: 20px;">
+                <button class="btn" onclick="closeTicketDetails()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Assignment Modal -->
     <div class="modal" id="assignModal">
         <div class="modal-content">
@@ -652,7 +733,8 @@
                     </td>
                     <td>${t.assignedTo || '-'}</td>
                     <td>
-                        <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
+                        <button class="action-btn view-btn" onclick="openTicketDetails(${JSON.stringify(t.ticketId)})">View Details</button>
+                        <button class="action-btn" onclick="openAssignModal(${JSON.stringify(t.ticketId)})">Assign</button>
                     </td>
                 </tr>
             `;
@@ -716,6 +798,37 @@
 
         function closeModal() {
             document.getElementById('assignModal').classList.remove('active');
+        }
+
+        function openTicketDetails(ticketId) {
+            const t = allTickets.find(ticket => ticket.ticketId === ticketId);
+            if (!t) return;
+
+            document.getElementById('detailTicketId').textContent = t.ticketId || '-';
+            document.getElementById('detailPhone').textContent = t.phone || '-';
+            document.getElementById('detailStreet').textContent = t.street || '-';
+            document.getElementById('detailBuilding').textContent = t.building || '-';
+            document.getElementById('detailApartment').textContent = t.apartment || '-';
+            document.getElementById('detailIssue').textContent = t.issue || '-';
+            document.getElementById('detailStatus').textContent = t.status || '-';
+            document.getElementById('detailAssignedTo').textContent = t.assignedTo || '-';
+            document.getElementById('detailCreatedDate').textContent = t.createdDate || '-';
+
+            const photoContainer = document.getElementById('detailPhotoContainer');
+            photoContainer.innerHTML = '';
+            if (t.photoUrl) {
+                const img = document.createElement('img');
+                img.src = t.photoUrl;
+                img.alt = 'Ticket photo';
+                img.className = 'detail-photo';
+                photoContainer.appendChild(img);
+            }
+
+            document.getElementById('ticketDetailsModal').classList.add('active');
+        }
+
+        function closeTicketDetails() {
+            document.getElementById('ticketDetailsModal').classList.remove('active');
         }
 
         async function toggleStatusButton(ticketId, currentStatus) {
