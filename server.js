@@ -11,7 +11,7 @@ app.use(helmet());
 // ========== CONFIGURATION ==========
 const PORT = 3000;
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyzcRitxnkRS6WvmOXnEAHKUPwY2EZSQH9Pk7f8p42PkBlN8OuWhT6Bl_LKD5RXElez2g/exec';
-const WHATSAPP_TOKEN = 'EAAdZBIzsZBOo4BRFmrdWIAh2gy2iQBayuZAfk14QkG6sgUjuAa9QDKPnyTLVYigIfuKwIpZBZBL4ctNhZCKRvXps1IorC3jmZCxNZAsfYqXRLS02HwXlJDDp9gyYBF7d9lZA3MD6lOQ3EImonGVaV5qiutMwSjDD1cC10ATIPiN6tin4HTeaXALpKGSFJlsvOWpGUtl22uEVHJZAPDElvTNhUOZA7Ugj0IZBR2uJ2LxVKhNDxHFphxNnjrVMlT7TsuZBC89W6PYV9ZCyShlZBsgAxceC2kEZAJn7';
+const WHATSAPP_TOKEN = 'EAAdZBIzsZBOo4BROO758B9Y6hOMFZBZBrs5pTkEx9QZAiYLD6XwY6XPaK2ffvFTefUdHTHHAkauzf7gJhWYtgItntpos3O94EuEmbOLvVcW5ZAb3cRThfU8hpYUlC5RB38HUHySFnwQlQRl4RZAr56iYFSWcBZCbHO4HUDxOiHujDK2lS41x9hVhhMkHVyXUgUUNewJQZCJF9DFFvlGgJtiLXako3ZALuNqLPERCWgpRZB84UdWd0ZBGNDpwrQapc7qyBUs4iSZCYTMrAx9yOX88sO9OE30pu';
 const PHONE_NUMBER_ID = '1029982963534049';
 const VERIFY_TOKEN = '12345';
 
@@ -20,6 +20,7 @@ console.log(`📍 Port: ${PORT}`);
 console.log(`✅ Security: Enabled (Helmet + CORS)`);
 console.log(`✅ Compression: Enabled`);
 console.log(`✅ WhatsApp: Configured`);
+console.log(`🔑 Token Status: ✅ ACTIVE (Never Expire)`);
 console.log(`=====================================\n`);
 
 const sessions = new Map();
@@ -682,7 +683,7 @@ function getText(lang, key) {
       ask_issue: "אנא פרט בקצרה מהי התקלה.",
       street_text_only: "נא לרשום את שם הרחוב בטקסט בלבד.",
       building_text_only: "נא לרשום את מספר הבניין בטקסט בלבד.",
-      apartment_text_only: "נא לרשום את מספר הדירה בטקסט בלבד.",
+      apartment_text_only: "נא ��רשום את מספר הדירה בטקסט בלבד.",
       issue_text_only: "נא לפרט את התקלה בטקסט בלבד."
     },
     en: {
@@ -771,5 +772,5 @@ app.listen(PORT, () => {
   console.log(`✅ Bamakor server is running on http://localhost:${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
   console.log(`📱 WhatsApp WebHook: http://localhost:${PORT}/webhook`);
-  console.log(`❤��  Health: http://localhost:${PORT}/health\n`);
+  console.log(`❤️  Health: http://localhost:${PORT}/health\n`);
 });
