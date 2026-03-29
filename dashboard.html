@@ -85,6 +85,20 @@
         .btn.danger:hover {
             background: #8B0000;
         }
+
+        /* Offline Indicator */
+        #offlineIndicator {
+            background: #FFF3CD;
+            color: #856404;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            border-left: 4px solid #FFC107;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
         
         /* Tabs */
         .tabs {
@@ -264,14 +278,6 @@
         
         .action-btn.delete:hover {
             background: #600000;
-        }
-        
-        .action-btn.restore {
-            background: #2E7D32;
-        }
-        
-        .action-btn.restore:hover {
-            background: #1B5E20;
         }
         
         .empty-message {
@@ -699,6 +705,8 @@
             </div>
         </header>
 
+        <div id="offlineIndicator" style="display: none;"></div>
+
         <div class="tabs" id="navTabs">
             <button class="tab active" onclick="switchTab('tickets')">All Tickets</button>
             <button class="tab" onclick="switchTab('open')">Open</button>
@@ -893,6 +901,89 @@
         let allEmployees = [];
         let allHistory = [];
 
+        // ========== OFFLINE MODE ==========
+        const OFFLINE_STORAGE_KEY = 'bamakor_tickets_cache';
+        let isOnline = navigator.onLine;
+
+        // Monitor online/offline status
+        window.addEventListener('online', () => {
+            isOnline = true;
+            document.getElementById('offlineIndicator').style.display = 'none';
+            showToast('Back Online - Syncing data...', 'success');
+            syncOfflineChanges();
+            loadData();
+        });
+
+        window.addEventListener('offline', () => {
+            isOnline = false;
+            document.getElementById('offlineIndicator').style.display = 'block';
+            document.getElementById('offlineIndicator').textContent = 'You are currently offline - Changes will sync when you reconnect';
+            showToast('You are now offline', 'error');
+        });
+
+        // Save tickets to localStorage
+        function saveToLocalStorage(tickets) {
+            try {
+                localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(tickets));
+            } catch (e) {
+                console.error('Storage error:', e);
+            }
+        }
+
+        // Get tickets from localStorage
+        function getFromLocalStorage() {
+            try {
+                const data = localStorage.getItem(OFFLINE_STORAGE_KEY);
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                console.error('Storage error:', e);
+                return null;
+            }
+        }
+
+        // Sync offline changes when back online
+        function syncOfflineChanges() {
+            const pendingChanges = localStorage.getItem('bamakor_pending_changes');
+            if (!pendingChanges) return;
+
+            try {
+                const changes = JSON.parse(pendingChanges);
+                changes.forEach(change => {
+                    if (change.action === 'status') {
+                        fetch('/api/tickets/status', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ticketId: change.ticketId, status: change.status})
+                        }).catch(err => console.error('Sync error:', err));
+                    } else if (change.action === 'notes') {
+                        fetch('/api/tickets/notes', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ticketId: change.ticketId, notes: change.notes})
+                        }).catch(err => console.error('Sync error:', err));
+                    } else if (change.action === 'delete') {
+                        fetch('/api/tickets/delete', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ticketId: change.ticketId})
+                        }).catch(err => console.error('Sync error:', err));
+                    }
+                });
+                localStorage.removeItem('bamakor_pending_changes');
+            } catch (e) {
+                console.error('Sync error:', e);
+            }
+        }
+
+        // Track pending changes
+        function addPendingChange(action, ticketId, data = {}) {
+            const pending = JSON.parse(localStorage.getItem('bamakor_pending_changes') || '[]');
+            pending.push({action, ticketId, ...data});
+            localStorage.setItem('bamakor_pending_changes', JSON.stringify(pending));
+        }
+
+        // ========== OFFLINE MODE END ==========
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
         }
@@ -916,28 +1007,38 @@
 
         async function loadData() {
             try {
-                const ticketsRes = await fetch('/api/tickets');
-                const ticketsData = await ticketsRes.json();
-                
-                if (!ticketsData.ok || !ticketsData.tickets) {
-                    throw new Error('Invalid response format');
-                }
+                if (isOnline) {
+                    const ticketsRes = await fetch('/api/tickets');
+                    const ticketsData = await ticketsRes.json();
+                    
+                    if (!ticketsData.ok || !ticketsData.tickets) {
+                        throw new Error('Invalid response format');
+                    }
 
-                allTickets = ticketsData.tickets.filter(t => t.status !== 'היסטוריה').sort((a, b) => {
-                    if (a.status === 'פתוח' && b.status !== 'פתוח') return -1;
-                    if (a.status !== 'פתוח' && b.status === 'פתוח') return 1;
-                    return 0;
-                });
+                    allTickets = ticketsData.tickets.filter(t => t.status !== 'היסטוריה').sort((a, b) => {
+                        if (a.status === 'פתוח' && b.status !== 'פתוח') return -1;
+                        if (a.status !== 'פתוח' && b.status === 'פתוח') return 1;
+                        return 0;
+                    });
 
-                allHistory = ticketsData.tickets.filter(t => t.status === 'היסטוריה') || [];
-                
-                const empRes = await fetch('/api/employees');
-                const empData = await empRes.json();
-                
-                if (empData.ok && empData.employees) {
-                    allEmployees = empData.employees;
-                    populateEmployeeSelect();
-                    renderTeamSection();
+                    allHistory = ticketsData.tickets.filter(t => t.status === 'היסטוריה') || [];
+                    
+                    saveToLocalStorage({tickets: allTickets, history: allHistory});
+                    
+                    const empRes = await fetch('/api/employees');
+                    const empData = await empRes.json();
+                    
+                    if (empData.ok && empData.employees) {
+                        allEmployees = empData.employees;
+                        populateEmployeeSelect();
+                        renderTeamSection();
+                    }
+                } else {
+                    const cached = getFromLocalStorage();
+                    if (cached) {
+                        allTickets = cached.tickets || [];
+                        allHistory = cached.history || [];
+                    }
                 }
 
                 updateStats();
@@ -945,7 +1046,17 @@
                 renderHistory();
             } catch(e) {
                 console.error('Error:', e);
-                showToast('Error loading data', 'error');
+                const cached = getFromLocalStorage();
+                if (cached) {
+                    allTickets = cached.tickets || [];
+                    allHistory = cached.history || [];
+                    updateStats();
+                    renderTickets();
+                    renderHistory();
+                    showToast('Loaded from offline cache', 'success');
+                } else {
+                    showToast('Error loading data', 'error');
+                }
             }
         }
 
@@ -1182,6 +1293,10 @@
             const ticketId = document.getElementById('notesTicketId').value;
             const notes = document.getElementById('notesText').value;
 
+            if (!isOnline) {
+                addPendingChange('notes', ticketId, {notes});
+            }
+
             fetch('/api/tickets/notes', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1198,7 +1313,9 @@
                 }
             })
             .catch(err => {
-                showToast('Error saving notes', 'error');
+                if (isOnline) {
+                    showToast('Error saving notes', 'error');
+                }
                 console.error('Error:', err);
             });
         }
@@ -1214,6 +1331,10 @@
 
         function confirmDelete() {
             const ticketId = document.getElementById('deleteTicketId').value;
+
+            if (!isOnline) {
+                addPendingChange('delete', ticketId, {});
+            }
 
             fetch('/api/tickets/delete', {
                 method: 'POST',
@@ -1231,7 +1352,9 @@
                 }
             })
             .catch(err => {
-                showToast('Error deleting ticket', 'error');
+                if (isOnline) {
+                    showToast('Error deleting ticket', 'error');
+                }
                 console.error('Error:', err);
             });
         }
@@ -1270,6 +1393,10 @@
         async function toggleStatusButton(ticketId, currentStatus) {
             const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
             
+            if (!isOnline) {
+                addPendingChange('status', ticketId, {status: newStatus});
+            }
+            
             fetch('/api/tickets/status', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -1285,7 +1412,9 @@
                 }
             })
             .catch(e => {
-                showToast('Error updating status', 'error');
+                if (isOnline) {
+                    showToast('Error updating status', 'error');
+                }
                 console.error('Error:', e);
             });
         }
