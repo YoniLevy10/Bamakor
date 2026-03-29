@@ -24,6 +24,12 @@
             justify-content: center;
             min-height: 100vh;
             background: linear-gradient(135deg, #C41E3A 0%, #A01730 100%);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9999;
         }
 
         .login-box {
@@ -34,28 +40,56 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
             max-width: 400px;
             width: 90%;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .login-box h1 {
             color: #C41E3A;
             margin-bottom: 10px;
-            font-size: 28px;
+            font-size: 32px;
+            font-weight: 700;
         }
 
         .login-box p {
             color: #666;
             margin-bottom: 30px;
             font-size: 14px;
+            line-height: 1.6;
         }
 
         #googleLoginDiv {
-            margin-bottom: 20px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: center;
         }
 
         .login-footer {
             color: #999;
             font-size: 12px;
             margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .login-error {
+            background: #FFE8E8;
+            color: #C41E3A;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            display: none;
         }
         
         /* Dashboard */
@@ -74,6 +108,7 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             border-left: 5px solid #C41E3A;
         }
+        
         h1 { 
             color: #2a2a2a; 
             font-size: 28px;
@@ -152,6 +187,7 @@
             font-size: 14px;
             border-left: 4px solid #FFC107;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            display: none;
         }
         
         /* Tabs */
@@ -753,17 +789,23 @@
             .login-box h1 {
                 font-size: 24px;
             }
+
+            #googleLoginDiv {
+                transform: scale(0.85);
+                transform-origin: center;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Login Page -->
-    <div id="loginPage" class="login-page">
+    <div id="loginPage">
         <div class="login-box">
             <h1>Bamakor</h1>
             <p>Maintenance Management System</p>
+            <div class="login-error" id="loginError"></div>
             <div id="googleLoginDiv"></div>
-            <p class="login-footer">Sign in with your Google Account</p>
+            <p class="login-footer">Sign in with your Google Account to access the dashboard</p>
         </div>
     </div>
 
@@ -780,7 +822,7 @@
                 </div>
             </header>
 
-            <div id="offlineIndicator" style="display: none;"></div>
+            <div id="offlineIndicator"></div>
 
             <div class="tabs" id="navTabs">
                 <button class="tab active" onclick="switchTab('tickets')">All Tickets</button>
@@ -973,125 +1015,75 @@
     </div>
 
     <script>
-        // ========== GOOGLE LOGIN ==========
-        const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE';
+        // ========== CONFIGURATION ==========
+        const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
+        const OFFLINE_STORAGE_KEY = 'bamakor_tickets_cache';
 
+        // ========== STATE VARIABLES ==========
         let currentUser = null;
         let authToken = null;
         let allTickets = [];
         let allEmployees = [];
         let allHistory = [];
-
-        // ========== OFFLINE MODE ==========
-        const OFFLINE_STORAGE_KEY = 'bamakor_tickets_cache';
         let isOnline = navigator.onLine;
 
-        // Monitor online/offline status
-        window.addEventListener('online', () => {
-            isOnline = true;
-            document.getElementById('offlineIndicator').style.display = 'none';
-            showToast('Back Online - Syncing data...', 'success');
-            syncOfflineChanges();
-            loadData();
+        // ========== INITIALIZATION ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            if (checkAuth()) {
+                initializeGoogleLogin();
+                loadData();
+            } else {
+                initializeGoogleLogin();
+            }
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
+            }
+
+            setupEventListeners();
         });
 
-        window.addEventListener('offline', () => {
-            isOnline = false;
-            document.getElementById('offlineIndicator').style.display = 'block';
-            document.getElementById('offlineIndicator').textContent = 'You are currently offline - Changes will sync when you reconnect';
-            showToast('You are now offline', 'error');
-        });
-
-        // Save tickets to localStorage
-        function saveToLocalStorage(tickets) {
-            try {
-                localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(tickets));
-            } catch (e) {
-                console.error('Storage error:', e);
-            }
+        // ========== EVENT LISTENERS ==========
+        function setupEventListeners() {
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            document.getElementById('searchInput').addEventListener('input', () => {
+                renderTickets();
+                renderHistory();
+            });
         }
 
-        // Get tickets from localStorage
-        function getFromLocalStorage() {
-            try {
-                const data = localStorage.getItem(OFFLINE_STORAGE_KEY);
-                return data ? JSON.parse(data) : null;
-            } catch (e) {
-                console.error('Storage error:', e);
-                return null;
-            }
-        }
-
-        // Sync offline changes when back online
-        function syncOfflineChanges() {
-            const pendingChanges = localStorage.getItem('bamakor_pending_changes');
-            if (!pendingChanges) return;
-
-            try {
-                const changes = JSON.parse(pendingChanges);
-                changes.forEach(change => {
-                    if (change.action === 'status') {
-                        fetch('/api/tickets/status', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${authToken}`
-                            },
-                            body: JSON.stringify({ticketId: change.ticketId, status: change.status})
-                        }).catch(err => console.error('Sync error:', err));
-                    } else if (change.action === 'notes') {
-                        fetch('/api/tickets/notes', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${authToken}`
-                            },
-                            body: JSON.stringify({ticketId: change.ticketId, notes: change.notes})
-                        }).catch(err => console.error('Sync error:', err));
-                    } else if (change.action === 'delete') {
-                        fetch('/api/tickets/delete', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${authToken}`
-                            },
-                            body: JSON.stringify({ticketId: change.ticketId})
-                        }).catch(err => console.error('Sync error:', err));
-                    }
-                });
-                localStorage.removeItem('bamakor_pending_changes');
-            } catch (e) {
-                console.error('Sync error:', e);
-            }
-        }
-
-        // Track pending changes
-        function addPendingChange(action, ticketId, data = {}) {
-            const pending = JSON.parse(localStorage.getItem('bamakor_pending_changes') || '[]');
-            pending.push({action, ticketId, ...data});
-            localStorage.setItem('bamakor_pending_changes', JSON.stringify(pending));
-        }
-
-        // ========== AUTH FUNCTIONS ==========
-
+        // ========== GOOGLE AUTH ==========
         function initializeGoogleLogin() {
+            if (!window.google) {
+                console.error('Google API not loaded');
+                return;
+            }
+
             window.google.accounts.id.initialize({
                 client_id: GOOGLE_CLIENT_ID,
-                callback: handleCredentialResponse
+                callback: handleCredentialResponse,
+                auto_select: false
             });
 
-            window.google.accounts.id.renderButton(
-                document.getElementById('googleLoginDiv'),
-                { 
-                    theme: 'outline', 
-                    size: 'large',
-                    width: '300'
-                }
-            );
+            const loginDiv = document.getElementById('googleLoginDiv');
+            if (loginDiv) {
+                window.google.accounts.id.renderButton(
+                    loginDiv,
+                    { 
+                        theme: 'outline', 
+                        size: 'large',
+                        width: '300',
+                        text: 'signin_with'
+                    }
+                );
+            }
         }
 
         async function handleCredentialResponse(response) {
             try {
+                showToast('Signing in...', 'success');
+                
                 const result = await fetch('/api/auth/google', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1111,18 +1103,20 @@
                     document.getElementById('dashboardPage').style.display = 'block';
                     
                     loadData();
-                    showToast('Welcome ' + currentUser.name, 'success');
+                    showToast('Welcome ' + currentUser.name + '!', 'success');
                 } else {
+                    showLoginError(data.error || 'Login failed');
                     showToast('Login failed: ' + data.error, 'error');
                 }
             } catch (error) {
                 console.error('Login error:', error);
+                showLoginError('Connection error. Please try again.');
                 showToast('Login error', 'error');
             }
         }
 
         function logout() {
-            window.google.accounts.id.disableAutoSelect();
+            window.google?.accounts?.id?.disableAutoSelect?.();
             localStorage.removeItem('authToken');
             localStorage.removeItem('currentUser');
             authToken = null;
@@ -1137,11 +1131,16 @@
             const user = localStorage.getItem('currentUser');
             
             if (token && user) {
-                authToken = token;
-                currentUser = JSON.parse(user);
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('dashboardPage').style.display = 'block';
-                return true;
+                try {
+                    authToken = token;
+                    currentUser = JSON.parse(user);
+                    document.getElementById('loginPage').style.display = 'none';
+                    document.getElementById('dashboardPage').style.display = 'block';
+                    return true;
+                } catch (e) {
+                    console.error('Auth check error:', e);
+                    return false;
+                }
             }
             
             document.getElementById('loginPage').style.display = 'flex';
@@ -1149,10 +1148,299 @@
             return false;
         }
 
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
+        function showLoginError(message) {
+            const errorDiv = document.getElementById('loginError');
+            if (errorDiv) {
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+                setTimeout(() => {
+                    errorDiv.style.display = 'none';
+                }, 5000);
+            }
         }
 
+        // ========== OFFLINE MODE ==========
+        function handleOnline() {
+            isOnline = true;
+            document.getElementById('offlineIndicator').style.display = 'none';
+            showToast('Back Online - Syncing data...', 'success');
+            syncOfflineChanges();
+            loadData();
+        }
+
+        function handleOffline() {
+            isOnline = false;
+            document.getElementById('offlineIndicator').style.display = 'block';
+            document.getElementById('offlineIndicator').textContent = 'You are currently offline - Changes will sync when you reconnect';
+            showToast('You are now offline', 'error');
+        }
+
+        function saveToLocalStorage(tickets) {
+            try {
+                localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(tickets));
+            } catch (e) {
+                console.error('Storage error:', e);
+            }
+        }
+
+        function getFromLocalStorage() {
+            try {
+                const data = localStorage.getItem(OFFLINE_STORAGE_KEY);
+                return data ? JSON.parse(data) : null;
+            } catch (e) {
+                console.error('Storage error:', e);
+                return null;
+            }
+        }
+
+        function syncOfflineChanges() {
+            const pendingChanges = localStorage.getItem('bamakor_pending_changes');
+            if (!pendingChanges) return;
+
+            try {
+                const changes = JSON.parse(pendingChanges);
+                changes.forEach(change => {
+                    makeAPICall(change);
+                });
+                localStorage.removeItem('bamakor_pending_changes');
+            } catch (e) {
+                console.error('Sync error:', e);
+            }
+        }
+
+        function addPendingChange(action, ticketId, data = {}) {
+            const pending = JSON.parse(localStorage.getItem('bamakor_pending_changes') || '[]');
+            pending.push({action, ticketId, ...data});
+            localStorage.setItem('bamakor_pending_changes', JSON.stringify(pending));
+        }
+
+        function makeAPICall(change) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            };
+
+            if (change.action === 'status') {
+                fetch('/api/tickets/status', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ticketId: change.ticketId, status: change.status})
+                }).catch(err => console.error('Sync error:', err));
+            } else if (change.action === 'notes') {
+                fetch('/api/tickets/notes', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ticketId: change.ticketId, notes: change.notes})
+                }).catch(err => console.error('Sync error:', err));
+            } else if (change.action === 'delete') {
+                fetch('/api/tickets/delete', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({ticketId: change.ticketId})
+                }).catch(err => console.error('Sync error:', err));
+            }
+        }
+
+        // ========== DATA LOADING ==========
+        async function loadData() {
+            try {
+                if (isOnline) {
+                    const ticketsRes = await fetch('/api/tickets', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    const ticketsData = await ticketsRes.json();
+                    
+                    if (!ticketsData.ok || !ticketsData.tickets) {
+                        throw new Error('Invalid response format');
+                    }
+
+                    allTickets = ticketsData.tickets.filter(t => t.status !== 'היסטוריה').sort((a, b) => {
+                        if (a.status === 'פתוח' && b.status !== 'פתוח') return -1;
+                        if (a.status !== 'פתוח' && b.status === 'פתוח') return 1;
+                        return 0;
+                    });
+
+                    allHistory = ticketsData.tickets.filter(t => t.status === 'היסטוריה') || [];
+                    
+                    saveToLocalStorage({tickets: allTickets, history: allHistory});
+                    
+                    const empRes = await fetch('/api/employees', {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    const empData = await empRes.json();
+                    
+                    if (empData.ok && empData.employees) {
+                        allEmployees = empData.employees;
+                        populateEmployeeSelect();
+                        renderTeamSection();
+                    }
+                } else {
+                    const cached = getFromLocalStorage();
+                    if (cached) {
+                        allTickets = cached.tickets || [];
+                        allHistory = cached.history || [];
+                    }
+                }
+
+                updateStats();
+                renderTickets();
+                renderHistory();
+            } catch(e) {
+                console.error('Error:', e);
+                const cached = getFromLocalStorage();
+                if (cached) {
+                    allTickets = cached.tickets || [];
+                    allHistory = cached.history || [];
+                    updateStats();
+                    renderTickets();
+                    renderHistory();
+                    showToast('Loaded from offline cache', 'success');
+                } else {
+                    showToast('Error loading data', 'error');
+                }
+            }
+        }
+
+        function updateStats() {
+            const open = allTickets.filter(t => t.status === 'פתוח').length;
+            const closed = allTickets.filter(t => t.status === 'סגור').length;
+            
+            document.getElementById('total').textContent = allTickets.length;
+            document.getElementById('open').textContent = open;
+            document.getElementById('closed').textContent = closed;
+            document.getElementById('teamCount').textContent = allEmployees.length;
+        }
+
+        function getFilteredTickets(filter) {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            let filtered = allTickets.filter(t => {
+                const searchText = [t.ticketId, t.phone, t.street, t.building, t.apartment, t.issue].join(' ').toLowerCase();
+                return searchText.includes(searchTerm);
+            });
+
+            if (filter === 'open') {
+                filtered = filtered.filter(t => t.status === 'פתוח');
+            } else if (filter === 'closed') {
+                filtered = filtered.filter(t => t.status === 'סגור');
+            }
+
+            return filtered;
+        }
+
+        function getFilteredHistory() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            return allHistory.filter(t => {
+                const searchText = [t.ticketId, t.phone, t.street, t.building, t.apartment, t.issue].join(' ').toLowerCase();
+                return searchText.includes(searchTerm);
+            });
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // ========== RENDERING ==========
+        function renderTicketRow(t) {
+            return `
+                <tr>
+                    <td><strong>${t.ticketId}</strong></td>
+                    <td class="col-phone">${t.phone}</td>
+                    <td class="col-street">${t.street}, ${t.building}/${t.apartment}</td>
+                    <td>${t.issue}</td>
+                    <td>
+                        <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
+                            ${t.status === 'סגור' ? 'Closed' : 'Open'}
+                        </button>
+                    </td>
+                    <td>${t.assignedTo || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">Details</button>
+                            <button class="action-btn" onclick="openNotesModal('${t.ticketId}')">Notes</button>
+                            <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
+                            <button class="action-btn delete" onclick="openDeleteModal('${t.ticketId}')">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderHistoryRow(t) {
+            return `
+                <tr>
+                    <td><strong>${t.ticketId}</strong></td>
+                    <td class="col-phone">${t.phone}</td>
+                    <td class="col-street">${t.street}, ${t.building}/${t.apartment}</td>
+                    <td>${t.issue}</td>
+                    <td><span class="closed-date">${formatDate(t.closedDate)}</span></td>
+                    <td>${t.assignedTo || '-'}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">View</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderTickets() {
+            const all = getFilteredTickets('all');
+            const open = getFilteredTickets('open');
+            const closed = getFilteredTickets('closed');
+
+            document.getElementById('ticketsBody').innerHTML = all.length > 0 
+                ? all.map(renderTicketRow).join('')
+                : '<tr><td colspan="7" class="empty-message">No tickets found</td></tr>';
+
+            document.getElementById('openBody').innerHTML = open.length > 0 
+                ? open.map(renderTicketRow).join('')
+                : '<tr><td colspan="7" class="empty-message">No open tickets</td></tr>';
+
+            document.getElementById('closedBody').innerHTML = closed.length > 0 
+                ? closed.map(renderTicketRow).join('')
+                : '<tr><td colspan="7" class="empty-message">No closed tickets</td></tr>';
+        }
+
+        function renderHistory() {
+            const history = getFilteredHistory();
+            
+            document.getElementById('historyBody').innerHTML = history.length > 0 
+                ? history.map(renderHistoryRow).join('')
+                : '<tr><td colspan="7" class="empty-message">No history yet</td></tr>';
+        }
+
+        function renderTeamSection() {
+            if (allEmployees.length === 0) {
+                document.getElementById('teamGrid').innerHTML = '<div class="empty-message">No team members found</div>';
+                return;
+            }
+
+            document.getElementById('teamGrid').innerHTML = allEmployees.map(emp => `
+                <div class="team-card" onclick="openEmployeeTickets('${emp.name}', '${emp.email}')">
+                    <h3>${emp.name}</h3>
+                    <p>${emp.email}</p>
+                    <div class="ticket-count">${emp.ticketsCount || 0} tickets</div>
+                </div>
+            `).join('');
+        }
+
+        function populateEmployeeSelect() {
+            const select = document.getElementById('assignTo');
+            const options = allEmployees.map(emp => 
+                `<option value="${emp.name}" data-email="${emp.email}">${emp.name}</option>`
+            ).join('');
+            select.innerHTML = '<option value="">Select Employee...</option>' + options;
+        }
+
+        // ========== UI INTERACTIONS ==========
         function toggleMenu() {
             const tabs = document.getElementById('navTabs');
             tabs.classList.toggle('active');
@@ -1167,4 +1455,276 @@
             setTimeout(() => {
                 toast.classList.add('hide');
                 setTimeout(() => toast.remove(), 300);
-            },
+            }, 3000);
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(tab + 'Section').classList.add('active');
+            event.target.classList.add('active');
+            
+            const tabs = document.getElementById('navTabs');
+            if (tabs.classList.contains('active')) {
+                tabs.classList.remove('active');
+            }
+        }
+
+        // ========== MODAL FUNCTIONS ==========
+        function openAssignModal(ticketId) {
+            document.getElementById('assignTicketId').value = ticketId;
+            document.getElementById('assignModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('assignModal').classList.remove('active');
+        }
+
+        function openDetailsModal(ticketId) {
+            const ticket = allTickets.find(t => t.ticketId === ticketId) || allHistory.find(t => t.ticketId === ticketId);
+            if (!ticket) return;
+
+            const detailsHtml = `
+                <div class="detail-item">
+                    <div class="detail-label">Ticket ID</div>
+                    <div class="detail-value">${ticket.ticketId}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Phone</div>
+                    <div class="detail-value">${ticket.phone}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Address</div>
+                    <div class="detail-value">${ticket.street}, Building ${ticket.building}, Apt ${ticket.apartment}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Issue</div>
+                    <div class="detail-value">${ticket.issue}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">${ticket.status === 'סגור' || ticket.status === 'היסטוריה' ? 'Closed' : 'Open'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Assigned To</div>
+                    <div class="detail-value">${ticket.assignedTo || 'Not assigned'}</div>
+                </div>
+                ${ticket.closedDate ? `
+                <div class="detail-item">
+                    <div class="detail-label">Closed Date</div>
+                    <div class="detail-value">${formatDate(ticket.closedDate)}</div>
+                </div>
+                ` : ''}
+                ${ticket.notes ? `
+                <div class="detail-item">
+                    <div class="detail-label">Notes</div>
+                    <div class="detail-value">${ticket.notes}</div>
+                </div>
+                ` : ''}
+            `;
+
+            document.getElementById('ticketDetails').innerHTML = detailsHtml;
+            document.getElementById('detailsModal').classList.add('active');
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').classList.remove('active');
+        }
+
+        function openNotesModal(ticketId) {
+            const ticket = allTickets.find(t => t.ticketId === ticketId);
+            if (!ticket) return;
+
+            document.getElementById('notesTicketId').value = ticketId;
+            document.getElementById('notesText').value = ticket.notes || '';
+            document.getElementById('notesModal').classList.add('active');
+        }
+
+        function closeNotesModal() {
+            document.getElementById('notesModal').classList.remove('active');
+        }
+
+        function saveNotes() {
+            const ticketId = document.getElementById('notesTicketId').value;
+            const notes = document.getElementById('notesText').value;
+
+            if (!isOnline) {
+                addPendingChange('notes', ticketId, {notes});
+            }
+
+            fetch('/api/tickets/notes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ticketId, notes})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    showToast('Notes saved successfully', 'success');
+                    closeNotesModal();
+                    loadData();
+                } else {
+                    showToast('Error saving notes', 'error');
+                }
+            })
+            .catch(err => {
+                if (isOnline) {
+                    showToast('Error saving notes', 'error');
+                }
+                console.error('Error:', err);
+            });
+        }
+
+        function openDeleteModal(ticketId) {
+            document.getElementById('deleteTicketId').value = ticketId;
+            document.getElementById('deleteModal').classList.add('active');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('active');
+        }
+
+        function confirmDelete() {
+            const ticketId = document.getElementById('deleteTicketId').value;
+
+            if (!isOnline) {
+                addPendingChange('delete', ticketId, {});
+            }
+
+            fetch('/api/tickets/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ticketId})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    showToast('Ticket deleted successfully', 'success');
+                    closeDeleteModal();
+                    loadData();
+                } else {
+                    showToast('Error deleting ticket', 'error');
+                }
+            })
+            .catch(err => {
+                if (isOnline) {
+                    showToast('Error deleting ticket', 'error');
+                }
+                console.error('Error:', err);
+            });
+        }
+
+        function openEmployeeTickets(empName, empEmail) {
+            const employeeTickets = allTickets.filter(t => t.assignedTo === empName);
+            
+            document.getElementById('employeeName').textContent = empName;
+            document.getElementById('employeeEmail').textContent = empEmail;
+            
+            if (employeeTickets.length === 0) {
+                document.getElementById('employeeTicketsContainer').innerHTML = 
+                    '<div class="empty-message">No tickets assigned to this employee</div>';
+            } else {
+                document.getElementById('employeeTicketsContainer').innerHTML = employeeTickets.map(t => `
+                    <div class="ticket-item">
+                        <div class="ticket-id">${t.ticketId}</div>
+                        <div class="ticket-issue">${t.issue}</div>
+                        <div class="ticket-details">
+                            <span>${t.street}, ${t.building}/${t.apartment}</span>
+                            <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
+                                ${t.status === 'סגור' ? 'Closed' : 'Open'}
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('employeeTicketsModal').classList.add('active');
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeTicketsModal').classList.remove('active');
+        }
+
+        async function toggleStatusButton(ticketId, currentStatus) {
+            const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
+            
+            if (!isOnline) {
+                addPendingChange('status', ticketId, {status: newStatus});
+            }
+            
+            fetch('/api/tickets/status', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ticketId, status: newStatus})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    showToast('Status updated', 'success');
+                    loadData();
+                } else {
+                    showToast('Error updating status', 'error');
+                }
+            })
+            .catch(e => {
+                if (isOnline) {
+                    showToast('Error updating status', 'error');
+                }
+                console.error('Error:', e);
+            });
+        }
+
+        async function assignTicket() {
+            const ticketId = document.getElementById('assignTicketId').value;
+            const selectElement = document.getElementById('assignTo');
+            const assignTo = selectElement.value;
+            
+            const selectedOption = Array.from(selectElement.options).find(opt => opt.value === assignTo);
+            const email = selectedOption?.dataset.email || '';
+
+            if (!assignTo || !email) {
+                showToast('Please select an employee', 'error');
+                return;
+            }
+
+            closeModal();
+            showToast('Assigning ticket...', 'success');
+
+            fetch('/api/tickets/assign', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
+                body: JSON.stringify({ticketId, assignedTo: assignTo, email})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.ok) {
+                    showToast('Ticket assigned and email sent!', 'success');
+                    loadData();
+                } else {
+                    showToast('Error assigning ticket', 'error');
+                }
+            })
+            .catch(err => {
+                showToast('Error assigning ticket', 'error');
+                console.error('Error:', err);
+            });
+        }
+
+        // Periodic data refresh
+        setInterval(loadData, 600000);
+    </script>
+</body>
+</html>
