@@ -7,16 +7,62 @@
     <title>Bamakor Dashboard</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+          --primary: #C41E3A;
+          --primary-dark: #A01730;
+          --primary-light: #FFE8E8;
+          --dark-bg: #1a1a1a;
+          --dark-card: #2a2a2a;
+          --light-bg: #f5f5f5;
+          --light-card: #ffffff;
+          --text-dark: #2a2a2a;
+          --text-light: #999;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+            background: var(--light-bg);
+            color: var(--text-dark);
             min-height: 100vh;
             padding: 20px;
+            transition: background 0.3s, color 0.3s;
         }
+
+        body.dark-mode {
+            background: var(--dark-bg);
+            color: #fff;
+        }
+
+        body.dark-mode header,
+        body.dark-mode .table-wrapper,
+        body.dark-mode .stat-card,
+        body.dark-mode .team-card,
+        body.dark-mode .tabs,
+        body.dark-mode .modal-content {
+            background: var(--dark-card);
+        }
+
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+
+        body.dark-mode table th {
+            background: #333;
+        }
+
+        body.dark-mode table td {
+            border-bottom-color: #333;
+        }
+
+        body.dark-mode tr:hover {
+            background: #333;
+        }
+
         .container { max-width: 1400px; margin: 0 auto; }
         
         header {
-            background: white;
+            background: var(--light-card);
             padding: 25px 30px;
             border-radius: 12px;
             margin-bottom: 30px;
@@ -24,11 +70,12 @@
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            border-left: 5px solid #C41E3A;
+            border-left: 5px solid var(--primary);
+            transition: background 0.3s;
         }
         
         h1 { 
-            color: #2a2a2a; 
+            color: var(--text-dark);
             font-size: 28px;
             font-weight: 700;
         }
@@ -45,16 +92,24 @@
             border-radius: 8px;
             width: 280px;
             font-size: 14px;
+            background: var(--light-card);
+            color: var(--text-dark);
+        }
+
+        body.dark-mode .search-box {
+            background: #333;
+            border-color: #444;
+            color: #fff;
         }
         
         .search-box:focus {
             outline: none;
-            border-color: #C41E3A;
+            border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
         }
         
         .btn { 
-            background: #C41E3A; 
+            background: var(--primary);
             color: white; 
             border: none; 
             padding: 10px 24px; 
@@ -66,26 +121,49 @@
         }
         
         .btn:hover { 
-            background: #A01730;
+            background: var(--primary-dark);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(196, 30, 58, 0.2);
+        }
+
+        .btn.secondary {
+            background: #666;
+        }
+
+        .btn.secondary:hover {
+            background: #555;
+        }
+        
+        .dark-mode-toggle {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .dark-mode-toggle:hover {
+            background: #555;
         }
         
         .tabs {
             display: flex;
             gap: 8px;
-            background: white;
+            background: var(--light-card);
             padding: 16px 20px;
             border-radius: 12px;
             margin-bottom: 30px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             flex-wrap: wrap;
+            transition: background 0.3s;
         }
         
         .tab {
             padding: 10px 20px;
             border: 2px solid #e0e0e0;
-            background: white;
+            background: var(--light-card);
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
@@ -95,14 +173,14 @@
         }
         
         .tab.active {
-            background: #C41E3A;
+            background: var(--primary);
             color: white;
-            border-color: #C41E3A;
+            border-color: var(--primary);
         }
         
         .tab:hover {
-            border-color: #C41E3A;
-            color: #C41E3A;
+            border-color: var(--primary);
+            color: var(--primary);
         }
         
         .stats {
@@ -113,16 +191,22 @@
         }
         
         .stat-card {
-            background: white;
+            background: var(--light-card);
             padding: 24px;
             border-radius: 12px;
             text-align: center;
-            border-top: 4px solid #C41E3A;
+            border-top: 4px solid var(--primary);
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
         }
         
         .stat-label { 
-            color: #999; 
+            color: var(--text-light);
             font-size: 12px; 
             margin-bottom: 12px;
             text-transform: uppercase;
@@ -131,7 +215,7 @@
         .stat-number { 
             font-size: 32px; 
             font-weight: bold; 
-            color: #C41E3A; 
+            color: var(--primary);
         }
         
         .section {
@@ -143,11 +227,12 @@
         }
         
         .table-wrapper {
-            background: white;
+            background: var(--light-card);
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             overflow-x: auto;
+            transition: background 0.3s;
         }
         
         table {
@@ -157,7 +242,7 @@
         
         th {
             background: #f8f8f8;
-            color: #2a2a2a;
+            color: var(--text-dark);
             padding: 16px;
             text-align: left;
             font-weight: 700;
@@ -170,7 +255,7 @@
             padding: 16px;
             border-bottom: 1px solid #f0f0f0;
             font-size: 14px;
-            color: #333;
+            color: var(--text-dark);
         }
         
         tr:hover { 
@@ -187,8 +272,8 @@
         }
         
         .status-open {
-            background: #FFE8E8;
-            color: #C41E3A;
+            background: var(--primary-light);
+            color: var(--primary);
         }
         
         .status-open:hover {
@@ -211,7 +296,7 @@
         }
         
         .action-btn {
-            background: #C41E3A;
+            background: var(--primary);
             color: white;
             padding: 6px 12px;
             border: none;
@@ -222,7 +307,7 @@
         }
         
         .action-btn:hover {
-            background: #A01730;
+            background: var(--primary-dark);
         }
         
         .action-btn.delete {
@@ -236,12 +321,12 @@
         .empty-message {
             text-align: center;
             padding: 60px 40px;
-            color: #999;
+            color: var(--text-light);
         }
         
         .spinner {
             border: 4px solid #f0f0f0;
-            border-top: 4px solid #C41E3A;
+            border-top: 4px solid var(--primary);
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -272,18 +357,19 @@
         }
         
         .modal-content {
-            background: white;
+            background: var(--light-card);
             padding: 32px;
             border-radius: 12px;
             max-width: 600px;
             width: 90%;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            transition: background 0.3s;
         }
         
         .modal-content h2 { 
-            color: #2a2a2a; 
+            color: var(--text-dark);
             margin-bottom: 24px;
-            border-bottom: 3px solid #C41E3A;
+            border-bottom: 3px solid var(--primary);
             padding-bottom: 16px;
         }
         
@@ -297,6 +383,16 @@
             border-radius: 8px;
             font-size: 14px;
             font-family: inherit;
+            background: var(--light-card);
+            color: var(--text-dark);
+        }
+
+        body.dark-mode .modal-content input,
+        body.dark-mode .modal-content select,
+        body.dark-mode .modal-content textarea {
+            background: #333;
+            border-color: #444;
+            color: #fff;
         }
         
         .modal-content textarea {
@@ -308,7 +404,7 @@
         .modal-content select:focus,
         .modal-content textarea:focus {
             outline: none;
-            border-color: #C41E3A;
+            border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
         }
         
@@ -327,13 +423,13 @@
         
         .detail-label {
             font-weight: 700;
-            color: #999;
+            color: var(--text-light);
             font-size: 12px;
             margin-bottom: 8px;
         }
         
         .detail-value {
-            color: #333;
+            color: var(--text-dark);
             font-size: 14px;
         }
         
@@ -344,12 +440,12 @@
         }
         
         .team-card {
-            background: white;
+            background: var(--light-card);
             padding: 24px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             text-align: center;
-            border-top: 4px solid #C41E3A;
+            border-top: 4px solid var(--primary);
             cursor: pointer;
             transition: all 0.3s;
         }
@@ -360,18 +456,18 @@
         }
         
         .team-card h3 {
-            color: #2a2a2a;
+            color: var(--text-dark);
             margin-bottom: 8px;
         }
         
         .team-card p {
-            color: #999;
+            color: var(--text-light);
             font-size: 12px;
             margin-bottom: 16px;
         }
         
         .ticket-count {
-            background: linear-gradient(135deg, #C41E3A 0%, #A01730 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
             padding: 12px;
             border-radius: 8px;
@@ -382,7 +478,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            background: #C41E3A;
+            background: var(--primary);
             color: white;
             padding: 16px 24px;
             border-radius: 8px;
@@ -398,7 +494,7 @@
         }
 
         .toast.error {
-            background: #C41E3A;
+            background: var(--primary);
         }
 
         @keyframes slideIn {
@@ -426,6 +522,18 @@
         .toast.hide {
             animation: slideOut 0.3s ease forwards;
         }
+
+        .keyboard-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #333;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
         
         @media (max-width: 768px) {
             body { padding: 12px; }
@@ -449,12 +557,16 @@
     </style>
 </head>
 <body>
+    <div class="keyboard-hint">💡 Ctrl+R: Refresh | Ctrl+E: Export CSV | Ctrl+D: Dark Mode</div>
+
     <div class="container">
         <header>
             <h1>Bamakor Dashboard</h1>
             <div class="controls">
                 <input type="text" class="search-box" id="searchInput" placeholder="Search tickets...">
                 <button class="btn" onclick="loadData()">Refresh</button>
+                <button class="btn secondary" onclick="exportToCSV()">Export CSV</button>
+                <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">🌙</button>
             </div>
         </header>
 
@@ -561,7 +673,7 @@
                 <option value="">Select Employee...</option>
             </select>
             <div class="modal-buttons">
-                <button class="btn" style="background: #999;" onclick="closeModal()">Cancel</button>
+                <button class="btn secondary" onclick="closeModal()">Cancel</button>
                 <button class="btn" onclick="assignTicket()">Assign & Send Email</button>
             </div>
         </div>
@@ -583,7 +695,7 @@
             <input type="hidden" id="notesTicketId">
             <textarea id="notesText" placeholder="Add your notes here..."></textarea>
             <div class="modal-buttons">
-                <button class="btn" style="background: #999;" onclick="closeNotesModal()">Cancel</button>
+                <button class="btn secondary" onclick="closeNotesModal()">Cancel</button>
                 <button class="btn" onclick="saveNotes()">Save Notes</button>
             </div>
         </div>
@@ -592,10 +704,10 @@
     <div class="modal" id="deleteModal">
         <div class="modal-content">
             <h2>Delete Ticket</h2>
-            <p style="color: #666; margin-bottom: 20px;">Are you sure?</p>
+            <p style="margin-bottom: 20px;">Are you sure?</p>
             <input type="hidden" id="deleteTicketId">
             <div class="modal-buttons">
-                <button class="btn" style="background: #999;" onclick="closeDeleteModal()">Cancel</button>
+                <button class="btn secondary" onclick="closeDeleteModal()">Cancel</button>
                 <button class="btn" style="background: #8B0000;" onclick="confirmDelete()">Delete</button>
             </div>
         </div>
@@ -604,6 +716,34 @@
     <script>
         let allTickets = [];
         let allEmployees = [];
+
+        // ========== DARK MODE ==========
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', isDark);
+        }
+
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // ========== KEYBOARD SHORTCUTS ==========
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'r') {
+                    e.preventDefault();
+                    loadData();
+                }
+                if (e.key === 'e') {
+                    e.preventDefault();
+                    exportToCSV();
+                }
+                if (e.key === 'd') {
+                    e.preventDefault();
+                    toggleDarkMode();
+                }
+            }
+        });
 
         // ========== INIT ==========
         document.addEventListener('DOMContentLoaded', loadData);
@@ -679,7 +819,7 @@
                         <td>${t.phone}</td>
                         <td>${t.street}, ${t.building}/${t.apartment}</td>
                         <td>${t.issue}</td>
-                        <td>${new Date(t.closedDate).toLocaleDateString()}</td>
+                        <td>${t.closedDate ? new Date(t.closedDate).toLocaleDateString() : '-'}</td>
                         <td>
                             <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">View</button>
                         </td>
@@ -724,7 +864,7 @@
                 <div class="team-card">
                     <h3>${emp.name}</h3>
                     <p>${emp.email}</p>
-                    <div class="ticket-count">${emp.ticketsCount || 0} tickets</div>
+                    <div class="ticket-count">${emp.ticketsCount || 0} open tickets</div>
                 </div>
             `).join('');
         }
@@ -735,6 +875,29 @@
                 allEmployees.map(emp => 
                     `<option value="${emp.name}" data-email="${emp.email}">${emp.name}</option>`
                 ).join('');
+        }
+
+        // ========== EXPORT TO CSV ==========
+        function exportToCSV() {
+            let csv = 'Ticket ID,Phone,Street,Building,Apartment,Issue,Status,Assigned To,Notes\n';
+            
+            allTickets.forEach(t => {
+                csv += `"${t.ticketId}","${t.phone}","${t.street}","${t.building}","${t.apartment}","${t.issue}","${t.status}","${t.assignedTo}","${t.notes}"\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `bamakor-tickets-${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast('CSV exported successfully', 'success');
         }
 
         // ========== MODALS ==========
@@ -769,166 +932,4 @@
                     <div class="detail-value">${ticket.issue}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Status</div>
-                    <div class="detail-value">${ticket.status === 'סגור' ? 'Closed' : 'Open'}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Assigned To</div>
-                    <div class="detail-value">${ticket.assignedTo || 'Not assigned'}</div>
-                </div>
-                ${ticket.notes ? `
-                <div class="detail-item">
-                    <div class="detail-label">Notes</div>
-                    <div class="detail-value">${ticket.notes}</div>
-                </div>
-                ` : ''}
-            `;
-            document.getElementById('detailsModal').classList.add('active');
-        }
-
-        function closeDetailsModal() {
-            document.getElementById('detailsModal').classList.remove('active');
-        }
-
-        function openNotesModal(ticketId) {
-            const ticket = allTickets.find(t => t.ticketId === ticketId);
-            if (!ticket) return;
-            document.getElementById('notesTicketId').value = ticketId;
-            document.getElementById('notesText').value = ticket.notes || '';
-            document.getElementById('notesModal').classList.add('active');
-        }
-
-        function closeNotesModal() {
-            document.getElementById('notesModal').classList.remove('active');
-        }
-
-        function openDeleteModal(ticketId) {
-            document.getElementById('deleteTicketId').value = ticketId;
-            document.getElementById('deleteModal').classList.add('active');
-        }
-
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').classList.remove('active');
-        }
-
-        // ========== ACTIONS ==========
-        async function toggleStatus(ticketId, currentStatus) {
-            const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
-            
-            try {
-                const response = await fetch('/api/tickets/status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketId, status: newStatus })
-                });
-
-                const data = await response.json();
-                if (data.ok) {
-                    showToast('Status updated', 'success');
-                    loadData();
-                } else {
-                    showToast('Error updating status', 'error');
-                }
-            } catch (error) {
-                showToast('Error updating status', 'error');
-            }
-        }
-
-        async function assignTicket() {
-            const ticketId = document.getElementById('assignTicketId').value;
-            const selectElement = document.getElementById('assignTo');
-            const assignTo = selectElement.value;
-            
-            const selectedOption = Array.from(selectElement.options).find(opt => opt.value === assignTo);
-            const email = selectedOption?.dataset.email || '';
-
-            if (!assignTo || !email) {
-                showToast('Please select an employee', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/tickets/assign', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketId, assignedTo: assignTo, email })
-                });
-
-                const data = await response.json();
-                if (data.ok) {
-                    showToast('Ticket assigned!', 'success');
-                    closeModal();
-                    loadData();
-                } else {
-                    showToast('Error assigning ticket', 'error');
-                }
-            } catch (error) {
-                showToast('Error assigning ticket', 'error');
-            }
-        }
-
-        async function saveNotes() {
-            const ticketId = document.getElementById('notesTicketId').value;
-            const notes = document.getElementById('notesText').value;
-
-            try {
-                const response = await fetch('/api/tickets/notes', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketId, notes })
-                });
-
-                const data = await response.json();
-                if (data.ok) {
-                    showToast('Notes saved', 'success');
-                    closeNotesModal();
-                    loadData();
-                }
-            } catch (error) {
-                showToast('Error saving notes', 'error');
-            }
-        }
-
-        async function confirmDelete() {
-            const ticketId = document.getElementById('deleteTicketId').value;
-
-            try {
-                const response = await fetch('/api/tickets/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketId })
-                });
-
-                const data = await response.json();
-                if (data.ok) {
-                    showToast('Ticket deleted', 'success');
-                    closeDeleteModal();
-                    loadData();
-                }
-            } catch (error) {
-                showToast('Error deleting ticket', 'error');
-            }
-        }
-
-        function switchTab(tab) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
-            document.getElementById(tab + 'Section').classList.add('active');
-            event.target.classList.add('active');
-        }
-
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.classList.add('hide');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-    </script>
-</body>
-</html>
+                    
