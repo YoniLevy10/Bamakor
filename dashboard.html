@@ -497,6 +497,13 @@
             font-size: 12px;
             color: #999;
             flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .ticket-item .status-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-left: auto;
         }
         
         .closed-date {
@@ -1245,7 +1252,9 @@
                         <div class="ticket-issue">${t.issue}</div>
                         <div class="ticket-details">
                             <span>${t.street}, ${t.building}/${t.apartment}</span>
-                            <span>Status: ${t.status === 'סגור' ? 'Closed' : 'Open'}</span>
+                            <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
+                                ${t.status === 'סגור' ? 'Closed' : 'Open'}
+                            </button>
                         </div>
                     </div>
                 `).join('');
