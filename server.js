@@ -20,6 +20,7 @@ console.log(`📍 Port: ${PORT}`);
 console.log(`✅ Security: Enabled (Helmet + Rate Limit + CORS)`);
 console.log(`✅ Compression: Enabled`);
 console.log(`✅ Caching: Enabled`);
+console.log(`✅ Error Logging: Enabled`);
 console.log(`=====================================\n`);
 
 const sessions = new Map();
@@ -174,7 +175,9 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     ok: true,
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    cacheSize: cache.size,
+    errorCount: errorLogs.length
   });
 });
 
@@ -193,6 +196,11 @@ app.get("/api/tickets", async (req, res) => {
     }
 
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listTickets`);
+    
+    if (!response.ok) {
+      throw new Error(`Apps Script returned ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.ok && data.tickets) {
@@ -218,7 +226,7 @@ app.get("/api/tickets", async (req, res) => {
     res.json(data);
   } catch (error) {
     logError(error, 'GET /api/tickets', req);
-    res.status(500).json({ ok: false, error: "Failed to load tickets" });
+    res.status(500).json({ ok: false, error: "Failed to load tickets. Please try again." });
   }
 });
 
@@ -231,6 +239,11 @@ app.get("/api/employees", async (req, res) => {
     }
 
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listEmployees`);
+    
+    if (!response.ok) {
+      throw new Error(`Apps Script returned ${response.status}`);
+    }
+
     const data = await response.json();
 
     if (data.ok && data.employees) {
@@ -250,7 +263,7 @@ app.get("/api/employees", async (req, res) => {
     res.json(data);
   } catch (error) {
     logError(error, 'GET /api/employees', req);
-    res.status(500).json({ ok: false, error: "Failed to load employees" });
+    res.status(500).json({ ok: false, error: "Failed to load employees. Please try again." });
   }
 });
 
@@ -281,6 +294,11 @@ app.post("/api/tickets/status", async (req, res) => {
     });
 
     const data = await response.json();
+    
+    if (!data.ok) {
+      throw new Error(data.error || "Failed to update status");
+    }
+
     console.log(`✅ Ticket ${ticketId} status updated to ${status}`);
     res.json(data);
   } catch (error) {
@@ -306,10 +324,10 @@ app.post("/api/tickets/assign", async (req, res) => {
       return res.status(400).json({ ok: false, error: "Invalid email" });
     }
 
-    assignedTo = sanitizeInput(assignedTo);
-    email = sanitizeInput(email);
+    const cleanedName = sanitizeInput(assignedTo);
+    const cleanedEmail = sanitizeInput(email);
 
-    console.log(`📨 Assigning ticket ${ticketId} to ${assignedTo}`);
+    console.log(`📨 Assigning ticket ${ticketId} to ${cleanedName}`);
 
     // Clear cache
     cache.delete('tickets');
@@ -320,8 +338,8 @@ app.post("/api/tickets/assign", async (req, res) => {
       body: JSON.stringify({
         action: "assignTicket",
         ticketId,
-        assignedTo,
-        email
+        assignedTo: cleanedName,
+        email: cleanedEmail
       })
     });
 
@@ -339,8 +357,8 @@ app.post("/api/tickets/assign", async (req, res) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "sendEmail",
-        email,
-        assignedTo,
+        email: cleanedEmail,
+        assignedTo: cleanedName,
         ticketId
       })
     });
@@ -355,7 +373,7 @@ app.post("/api/tickets/assign", async (req, res) => {
       });
     }
 
-    console.log(`✅ Ticket ${ticketId} assigned and email sent to ${email}`);
+    console.log(`✅ Ticket ${ticketId} assigned and email sent to ${cleanedEmail}`);
     res.json({
       ok: true,
       message: "Ticket assigned and email sent successfully"
@@ -396,6 +414,11 @@ app.post("/api/tickets/notes", async (req, res) => {
     });
 
     const data = await response.json();
+    
+    if (!data.ok) {
+      throw new Error(data.error || "Failed to update notes");
+    }
+
     console.log(`✅ Notes updated for ticket ${ticketId}`);
     res.json(data);
   } catch (error) {
@@ -426,6 +449,11 @@ app.post("/api/tickets/delete", async (req, res) => {
     });
 
     const data = await response.json();
+    
+    if (!data.ok) {
+      throw new Error(data.error || "Failed to delete ticket");
+    }
+
     console.log(`✅ Ticket ${ticketId} deleted`);
     res.json(data);
   } catch (error) {
@@ -656,7 +684,7 @@ async function sendWhatsAppMessage(to, messageText) {
     const rawText = await response.text();
 
     if (!response.ok) {
-      throw new Error(`WhatsApp API error: ${rawText}`);
+      throw new Error(`WhatsApp API error: ${response.status}`);
     }
 
     console.log(`✅ WhatsApp message sent to ${to}`);
