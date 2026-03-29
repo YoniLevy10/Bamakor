@@ -365,23 +365,48 @@
             animation: slideOut 0.3s ease forwards;
         }
         
+        /* Hamburger Button */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #3F3F3F;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .hamburger:hover { background: #f0f0f0; }
+
         /* Mobile Responsive */
         @media (max-width: 768px) {
             body { padding: 10px; }
             header {
-                flex-direction: column;
-                gap: 15px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
                 padding: 15px;
+                align-items: center;
             }
-            h1 { font-size: 24px; }
+            .hamburger { display: block; }
+            h1 { font-size: 24px; flex: 1; }
             .controls { 
                 flex-direction: column; 
-                width: 100%; 
+                width: 100%;
+                order: 3;
             }
             .search-box { width: 100%; }
-            .tabs { 
-                flex-direction: row;
-                overflow-x: auto;
+            .tabs {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+                max-height: 0;
+                padding: 0 10px;
+                transition: max-height 0.3s ease, padding 0.3s ease;
+            }
+            .tabs.open {
+                max-height: 500px;
                 padding: 10px;
             }
             .tab { 
@@ -438,6 +463,7 @@
     <div class="container">
         <header>
             <h1>🏢 Bamakor Dashboard</h1>
+            <button class="hamburger" onclick="toggleMenu()" id="hamburgerBtn" aria-label="Toggle menu" aria-expanded="false">&#9776;</button>
             <div class="controls">
                 <input type="text" class="search-box" id="searchInput" placeholder="🔍 Search...">
                 <button class="btn" onclick="loadData()">🔄 Refresh</button>
@@ -567,6 +593,14 @@
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
+        }
+
+        function toggleMenu() {
+            const tabs = document.querySelector('.tabs');
+            const btn = document.getElementById('hamburgerBtn');
+            const isOpen = tabs.classList.toggle('open');
+            btn.textContent = isOpen ? '\u2715' : '\u2630';
+            btn.setAttribute('aria-expanded', isOpen);
         }
 
         function showToast(message, type = 'success') {
