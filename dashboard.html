@@ -10,24 +10,28 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
-            background: linear-gradient(135deg, #3F3F3F 0%, #2a2a2a 100%);
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 1400px; margin: auto; }
+        .container { max-width: 1400px; margin: 0 auto; }
         
         header {
             background: white;
-            padding: 30px;
-            border-radius: 15px;
-            margin-bottom: 20px;
+            padding: 25px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             border-left: 5px solid #C41E3A;
         }
-        h1 { color: #3F3F3F; font-size: 32px; }
+        h1 { 
+            color: #2a2a2a; 
+            font-size: 28px;
+            font-weight: 700;
+        }
         
         .hamburger-btn {
             display: none;
@@ -35,38 +39,45 @@
             border: none;
             font-size: 28px;
             cursor: pointer;
-            color: #3F3F3F;
+            color: #2a2a2a;
         }
         
         .controls {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
         }
         
         .search-box {
-            padding: 10px 15px;
-            border: 2px solid #ddd;
+            padding: 10px 16px;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            width: 250px;
+            width: 280px;
             font-size: 14px;
+            transition: all 0.3s;
         }
         .search-box:focus {
             outline: none;
             border-color: #C41E3A;
+            box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
         }
         
         .btn { 
             background: #C41E3A; 
             color: white; 
             border: none; 
-            padding: 10px 20px; 
+            padding: 10px 24px; 
             border-radius: 8px; 
             cursor: pointer; 
             font-weight: 600;
             transition: all 0.3s;
+            font-size: 14px;
         }
-        .btn:hover { background: #A01730; }
+        .btn:hover { 
+            background: #A01730;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(196, 30, 58, 0.2);
+        }
         
         .btn.danger {
             background: #C41E3A;
@@ -78,25 +89,27 @@
         /* Tabs */
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             background: white;
-            padding: 15px 30px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             flex-wrap: wrap;
             overflow-x: auto;
         }
         
         .tab {
             padding: 10px 20px;
-            border: 2px solid #ddd;
+            border: 2px solid #e0e0e0;
             background: white;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
             white-space: nowrap;
+            font-size: 14px;
+            color: #666;
         }
         
         .tab.active {
@@ -107,27 +120,44 @@
         
         .tab:hover {
             border-color: #C41E3A;
+            color: #C41E3A;
         }
         
         /* Stats */
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 20px;
+            margin-bottom: 30px;
         }
         
         .stat-card {
             background: white;
-            padding: 20px;
+            padding: 24px;
             border-radius: 12px;
             text-align: center;
             border-top: 4px solid #C41E3A;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s;
         }
         
-        .stat-label { color: #666; font-size: 12px; margin-bottom: 8px; }
-        .stat-number { font-size: 28px; font-weight: bold; color: #C41E3A; }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        }
+        
+        .stat-label { 
+            color: #999; 
+            font-size: 12px; 
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-number { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #C41E3A; 
+        }
         
         /* Sections */
         .section {
@@ -140,9 +170,9 @@
         /* Table */
         .table-wrapper {
             background: white;
-            border-radius: 15px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             overflow-x: auto;
         }
         
@@ -152,21 +182,27 @@
         }
         
         th {
-            background: linear-gradient(135deg, #3F3F3F 0%, #2a2a2a 100%);
-            color: white;
-            padding: 15px;
+            background: #f8f8f8;
+            color: #2a2a2a;
+            padding: 16px;
             text-align: left;
-            font-weight: 600;
+            font-weight: 700;
             font-size: 13px;
+            border-bottom: 2px solid #e0e0e0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         td {
-            padding: 15px;
+            padding: 16px;
             border-bottom: 1px solid #f0f0f0;
-            font-size: 13px;
+            font-size: 14px;
+            color: #333;
         }
         
-        tr:hover { background: #f8f8f8; }
+        tr:hover { 
+            background: #fafafa;
+        }
         
         .status-btn {
             padding: 8px 16px;
@@ -179,15 +215,13 @@
         }
         
         .status-open {
-            background: #FFEBEE;
+            background: #FFE8E8;
             color: #C41E3A;
         }
         
         .status-open:hover {
             background: #FFD6D6;
-            color: #A01730;
             transform: scale(1.05);
-            box-shadow: 0 3px 8px rgba(196, 30, 58, 0.2);
         }
         
         .status-closed {
@@ -197,9 +231,13 @@
         
         .status-closed:hover {
             background: #D1F0D1;
-            color: #1B5E20;
             transform: scale(1.05);
-            box-shadow: 0 3px 8px rgba(46, 125, 50, 0.2);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
         }
         
         .action-btn {
@@ -211,13 +249,13 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
-            margin-right: 5px;
             transition: all 0.3s;
         }
         
         .action-btn:hover {
             background: #A01730;
-            box-shadow: 0 3px 8px rgba(196, 30, 58, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 6px rgba(196, 30, 58, 0.2);
         }
         
         .action-btn.delete {
@@ -230,8 +268,9 @@
         
         .empty-message {
             text-align: center;
-            padding: 40px;
+            padding: 60px 40px;
             color: #999;
+            font-size: 16px;
         }
         
         .spinner {
@@ -257,8 +296,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.4);
             z-index: 1000;
+            backdrop-filter: blur(4px);
         }
         
         .modal.active { 
@@ -269,20 +309,21 @@
         
         .modal-content {
             background: white;
-            padding: 30px;
-            border-radius: 15px;
-            max-width: 500px;
+            padding: 32px;
+            border-radius: 12px;
+            max-width: 600px;
             width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            max-height: 80vh;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-height: 85vh;
             overflow-y: auto;
         }
         
         .modal-content h2 { 
-            color: #3F3F3F; 
-            margin-bottom: 20px;
+            color: #2a2a2a; 
+            margin-bottom: 24px;
             border-bottom: 3px solid #C41E3A;
-            padding-bottom: 10px;
+            padding-bottom: 16px;
+            font-size: 20px;
         }
         
         .modal-content input,
@@ -290,11 +331,12 @@
         .modal-content textarea {
             width: 100%;
             padding: 12px;
-            margin-bottom: 15px;
-            border: 2px solid #ddd;
+            margin-bottom: 16px;
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 14px;
             font-family: inherit;
+            transition: all 0.3s;
         }
         
         .modal-content textarea {
@@ -307,64 +349,145 @@
         .modal-content textarea:focus {
             outline: none;
             border-color: #C41E3A;
+            box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.1);
         }
         
         .modal-buttons {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             justify-content: flex-end;
+            margin-top: 24px;
         }
         
         .detail-item {
-            margin-bottom: 15px;
-            padding-bottom: 15px;
+            margin-bottom: 18px;
+            padding-bottom: 18px;
             border-bottom: 1px solid #f0f0f0;
         }
         
         .detail-label {
-            font-weight: 600;
-            color: #3F3F3F;
-            font-size: 12px;
-            margin-bottom: 5px;
+            font-weight: 700;
+            color: #2a2a2a;
+            font-size: 13px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #999;
         }
         
         .detail-value {
-            color: #666;
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
         }
         
         /* Team Section */
         .team-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 20px;
         }
         
         .team-card {
             background: white;
-            padding: 20px;
+            padding: 24px;
             border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             text-align: center;
             border-top: 4px solid #C41E3A;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .team-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
         }
         
         .team-card h3 {
-            color: #3F3F3F;
-            margin-bottom: 10px;
+            color: #2a2a2a;
+            margin-bottom: 8px;
+            font-size: 16px;
         }
         
         .team-card p {
-            color: #666;
+            color: #999;
             font-size: 12px;
-            margin-bottom: 10px;
+            margin-bottom: 16px;
         }
         
         .ticket-count {
-            background: #C41E3A;
+            background: linear-gradient(135deg, #C41E3A 0%, #A01730 100%);
             color: white;
-            padding: 10px;
-            border-radius: 6px;
-            font-weight: 600;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        /* Employee Tickets Modal */
+        .employee-tickets {
+            max-width: 800px;
+        }
+        
+        .employee-header {
+            background: linear-gradient(135deg, #C41E3A 0%, #A01730 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        
+        .employee-header h2 {
+            border: none;
+            padding: 0;
+            margin: 0;
+            font-size: 22px;
+        }
+        
+        .employee-header p {
+            color: rgba(255,255,255,0.9);
+            margin-top: 8px;
+        }
+        
+        .tickets-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .ticket-item {
+            background: #f8f8f8;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #C41E3A;
+            transition: all 0.3s;
+        }
+        
+        .ticket-item:hover {
+            background: #f0f0f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .ticket-id {
+            font-weight: 700;
+            color: #2a2a2a;
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+        
+        .ticket-issue {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        
+        .ticket-details {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #999;
         }
         
         /* Toast Notification */
@@ -374,12 +497,13 @@
             right: 20px;
             background: #C41E3A;
             color: white;
-            padding: 15px 20px;
+            padding: 16px 24px;
             border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             z-index: 3000;
             animation: slideIn 0.3s ease;
             font-weight: 600;
+            font-size: 14px;
         }
 
         .toast.success {
@@ -418,60 +542,93 @@
         
         /* Mobile Responsive */
         @media (max-width: 768px) {
-            body { padding: 10px; }
+            body { padding: 12px; }
             header {
                 flex-direction: row;
                 gap: 10px;
-                padding: 15px;
+                padding: 16px;
+                margin-bottom: 20px;
             }
-            h1 { font-size: 20px; }
+            h1 { 
+                font-size: 20px;
+                flex: 1;
+            }
             .hamburger-btn {
                 display: block;
             }
             .controls { 
                 flex-direction: column;
-                flex: 1;
                 width: 100%;
-                gap: 8px;
+                gap: 10px;
             }
             .search-box { 
                 width: 100%;
-                padding: 8px 12px;
-                font-size: 13px;
+                padding: 10px 12px;
+                font-size: 14px;
             }
             .btn {
-                padding: 8px 16px;
+                padding: 10px 16px;
                 font-size: 13px;
                 width: 100%;
             }
             .tabs { 
                 display: none;
                 flex-direction: column;
-                padding: 10px;
+                padding: 12px;
                 gap: 8px;
+                margin-bottom: 20px;
             }
             .tabs.active {
                 display: flex;
             }
             .tab { 
-                padding: 10px 12px;
-                font-size: 13px;
+                padding: 12px;
+                font-size: 14px;
                 text-align: center;
-                border: 2px solid #ddd;
             }
-            .stat-number { font-size: 20px; }
-            .stat-label { font-size: 10px; }
-            table { font-size: 12px; }
-            td, th { padding: 10px 8px; }
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+                margin-bottom: 20px;
+            }
+            .stat-card {
+                padding: 16px;
+            }
+            .stat-number { font-size: 24px; }
+            .stat-label { font-size: 11px; }
+            
+            table { font-size: 13px; }
+            td, th { padding: 12px 8px; }
+            
+            .action-buttons {
+                gap: 4px;
+            }
             .action-btn {
                 padding: 6px 10px;
                 font-size: 11px;
-                margin-right: 3px;
-                margin-bottom: 5px;
             }
+            
             .team-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-template-columns: 1fr;
+                gap: 12px;
             }
+            
+            .team-card {
+                padding: 16px;
+            }
+            
+            .col-phone,
+            .col-street,
+            .col-building,
+            .col-apartment {
+                display: none;
+            }
+            
+            .modal-content {
+                padding: 24px;
+                width: 95%;
+            }
+            
             .toast {
                 bottom: 10px;
                 right: 10px;
@@ -481,37 +638,27 @@
         }
         
         @media (max-width: 480px) {
-            body { padding: 5px; }
+            body { padding: 8px; }
             header { 
-                padding: 10px;
+                padding: 12px;
                 flex-direction: column;
                 gap: 10px;
             }
             h1 { font-size: 18px; }
             
-            .col-phone,
-            .col-street,
-            .col-building,
-            .col-apartment {
-                display: none;
-            }
-            
-            .action-btn {
-                padding: 5px 8px;
-                font-size: 10px;
-                margin-right: 2px;
-            }
-            
             .stat-card {
                 padding: 12px;
             }
             
-            .stat-number { font-size: 18px; }
-            .stat-label { font-size: 9px; }
+            .stat-number { font-size: 20px; }
+            .stat-label { font-size: 10px; }
             
-            .modal-content {
-                padding: 20px;
-                width: 95%;
+            table { font-size: 12px; }
+            td, th { padding: 10px 6px; }
+            
+            .action-btn {
+                padding: 5px 8px;
+                font-size: 10px;
             }
         }
     </style>
@@ -522,13 +669,13 @@
             <h1>Bamakor Dashboard</h1>
             <button class="hamburger-btn" onclick="toggleMenu()">☰</button>
             <div class="controls">
-                <input type="text" class="search-box" id="searchInput" placeholder="Search...">
+                <input type="text" class="search-box" id="searchInput" placeholder="Search tickets...">
                 <button class="btn" onclick="loadData()">Refresh</button>
             </div>
         </header>
 
         <div class="tabs" id="navTabs">
-            <button class="tab active" onclick="switchTab('tickets')">Tickets</button>
+            <button class="tab active" onclick="switchTab('tickets')">All Tickets</button>
             <button class="tab" onclick="switchTab('open')">Open</button>
             <button class="tab" onclick="switchTab('closed')">Closed</button>
             <button class="tab" onclick="switchTab('team')">Team</button>
@@ -536,7 +683,7 @@
 
         <div class="stats">
             <div class="stat-card">
-                <div class="stat-label">Total</div>
+                <div class="stat-label">Total Tickets</div>
                 <div class="stat-number" id="total">0</div>
             </div>
             <div class="stat-card">
@@ -561,17 +708,15 @@
                         <tr>
                             <th>Ticket ID</th>
                             <th class="col-phone">Phone</th>
-                            <th class="col-street">Street</th>
-                            <th class="col-building">Building</th>
-                            <th class="col-apartment">Apartment</th>
+                            <th class="col-street">Address</th>
                             <th>Issue</th>
                             <th>Status</th>
                             <th>Assigned</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="ticketsBody">
-                        <tr><td colspan="9" class="empty-message"><div class="spinner"></div>Loading...</td></tr>
+                        <tr><td colspan="7" class="empty-message"><div class="spinner"></div>Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -585,11 +730,11 @@
                         <tr>
                             <th>Ticket ID</th>
                             <th class="col-phone">Phone</th>
-                            <th class="col-street">Street</th>
+                            <th class="col-street">Address</th>
                             <th>Issue</th>
                             <th>Status</th>
                             <th>Assigned</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="openBody">
@@ -607,11 +752,11 @@
                         <tr>
                             <th>Ticket ID</th>
                             <th class="col-phone">Phone</th>
-                            <th class="col-street">Street</th>
+                            <th class="col-street">Address</th>
                             <th>Issue</th>
                             <th>Status</th>
                             <th>Assigned</th>
-                            <th>Action</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="closedBody">
@@ -677,6 +822,20 @@
             <div class="modal-buttons">
                 <button class="btn" style="background: #999;" onclick="closeDeleteModal()">Cancel</button>
                 <button class="btn danger" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Tickets Modal -->
+    <div class="modal" id="employeeTicketsModal">
+        <div class="modal-content employee-tickets">
+            <div class="employee-header">
+                <h2 id="employeeName">Employee Name</h2>
+                <p id="employeeEmail">email@example.com</p>
+            </div>
+            <div id="employeeTicketsContainer" class="tickets-list"></div>
+            <div class="modal-buttons" style="margin-top: 24px;">
+                <button class="btn" onclick="closeEmployeeModal()">Close</button>
             </div>
         </div>
     </div>
@@ -770,9 +929,7 @@
                 <tr>
                     <td><strong>${t.ticketId}</strong></td>
                     <td class="col-phone">${t.phone}</td>
-                    <td class="col-street">${t.street}</td>
-                    <td class="col-building">${t.building}</td>
-                    <td class="col-apartment">${t.apartment}</td>
+                    <td class="col-street">${t.street}, ${t.building}/${t.apartment}</td>
                     <td>${t.issue}</td>
                     <td>
                         <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
@@ -781,10 +938,12 @@
                     </td>
                     <td>${t.assignedTo || '-'}</td>
                     <td>
-                        <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">Details</button>
-                        <button class="action-btn" onclick="openNotesModal('${t.ticketId}')">Notes</button>
-                        <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
-                        <button class="action-btn delete" onclick="openDeleteModal('${t.ticketId}')">Delete</button>
+                        <div class="action-buttons">
+                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">Details</button>
+                            <button class="action-btn" onclick="openNotesModal('${t.ticketId}')">Notes</button>
+                            <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
+                            <button class="action-btn delete" onclick="openDeleteModal('${t.ticketId}')">Delete</button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -797,7 +956,7 @@
 
             document.getElementById('ticketsBody').innerHTML = all.length > 0 
                 ? all.map(renderTicketRow).join('')
-                : '<tr><td colspan="9" class="empty-message">No tickets found</td></tr>';
+                : '<tr><td colspan="7" class="empty-message">No tickets found</td></tr>';
 
             document.getElementById('openBody').innerHTML = open.length > 0 
                 ? open.map(renderTicketRow).join('')
@@ -815,7 +974,7 @@
             }
 
             document.getElementById('teamGrid').innerHTML = allEmployees.map(emp => `
-                <div class="team-card">
+                <div class="team-card" onclick="openEmployeeTickets('${emp.name}', '${emp.email}')">
                     <h3>${emp.name}</h3>
                     <p>${emp.email}</p>
                     <div class="ticket-count">${emp.ticketsCount || 0} tickets</div>
@@ -869,16 +1028,8 @@
                     <div class="detail-value">${ticket.phone}</div>
                 </div>
                 <div class="detail-item">
-                    <div class="detail-label">Street</div>
-                    <div class="detail-value">${ticket.street}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Building</div>
-                    <div class="detail-value">${ticket.building}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Apartment</div>
-                    <div class="detail-value">${ticket.apartment}</div>
+                    <div class="detail-label">Address</div>
+                    <div class="detail-value">${ticket.street}, Building ${ticket.building}, Apt ${ticket.apartment}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Issue</div>
@@ -977,6 +1128,35 @@
                 showToast('Error deleting ticket', 'error');
                 console.error('Error:', err);
             });
+        }
+
+        function openEmployeeTickets(empName, empEmail) {
+            const employeeTickets = allTickets.filter(t => t.assignedTo === empName);
+            
+            document.getElementById('employeeName').textContent = empName;
+            document.getElementById('employeeEmail').textContent = empEmail;
+            
+            if (employeeTickets.length === 0) {
+                document.getElementById('employeeTicketsContainer').innerHTML = 
+                    '<div class="empty-message">No tickets assigned to this employee</div>';
+            } else {
+                document.getElementById('employeeTicketsContainer').innerHTML = employeeTickets.map(t => `
+                    <div class="ticket-item">
+                        <div class="ticket-id">${t.ticketId}</div>
+                        <div class="ticket-issue">${t.issue}</div>
+                        <div class="ticket-details">
+                            <span>${t.street}, ${t.building}/${t.apartment}</span>
+                            <span>Status: ${t.status === 'סגור' ? 'Closed' : 'Open'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('employeeTicketsModal').classList.add('active');
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeTicketsModal').classList.remove('active');
         }
 
         async function toggleStatusButton(ticketId, currentStatus) {
