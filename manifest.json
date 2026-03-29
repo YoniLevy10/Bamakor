@@ -1,1 +1,27 @@
-{"short_name":"Bamakor","name":"Bamakor Dashboard","icons":[{"src":"icon-192x192.png","sizes":"192x192","type":"image/png"},{"src":"icon-512x512.png","sizes":"512x512","type":"image/png"}],"start_url":"/index.html","display":"standalone","background_color":"#ffffff","theme_color":"#ffffff"}
+{
+  "name": "Bamakor - Maintenance Management",
+  "short_name": "Bamakor",
+  "description": "Professional maintenance ticket management system",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#C41E3A",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23C41E3A' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='central'>BMK</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f5f5f5' width='540' height='720'/></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ]
+}
