@@ -59,6 +59,20 @@
             background: #333;
         }
 
+        #connectionStatus {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: #2E7D32;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 2000;
+            transition: background 0.3s;
+        }
+
         .container { max-width: 1400px; margin: 0 auto; }
         
         header {
@@ -269,6 +283,7 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 12px;
+            transition: all 0.3s;
         }
         
         .status-open {
@@ -278,6 +293,7 @@
         
         .status-open:hover {
             background: #FFD6D6;
+            transform: scale(1.05);
         }
         
         .status-closed {
@@ -287,6 +303,7 @@
         
         .status-closed:hover {
             background: #D1F0D1;
+            transform: scale(1.05);
         }
         
         .action-buttons {
@@ -304,10 +321,12 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
+            transition: all 0.3s;
         }
         
         .action-btn:hover {
             background: var(--primary-dark);
+            transform: translateY(-2px);
         }
         
         .action-btn.delete {
@@ -322,6 +341,7 @@
             text-align: center;
             padding: 60px 40px;
             color: var(--text-light);
+            font-size: 16px;
         }
         
         .spinner {
@@ -426,11 +446,13 @@
             color: var(--text-light);
             font-size: 12px;
             margin-bottom: 8px;
+            text-transform: uppercase;
         }
         
         .detail-value {
             color: var(--text-dark);
             font-size: 14px;
+            line-height: 1.5;
         }
         
         .team-grid {
@@ -458,6 +480,7 @@
         .team-card h3 {
             color: var(--text-dark);
             margin-bottom: 8px;
+            font-size: 16px;
         }
         
         .team-card p {
@@ -472,6 +495,7 @@
             padding: 12px;
             border-radius: 8px;
             font-weight: 700;
+            font-size: 14px;
         }
         
         .toast {
@@ -494,7 +518,7 @@
         }
 
         .toast.error {
-            background: var(--primary);
+            background: #C41E3A;
         }
 
         @keyframes slideIn {
@@ -553,10 +577,23 @@
             .stats { grid-template-columns: 1fr; }
             table { font-size: 12px; }
             td, th { padding: 10px; }
+            #connectionStatus {
+                top: 10px;
+                right: 10px;
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+        }
+
+        @print {
+            header, .controls, .btn, .modal, .keyboard-hint, #connectionStatus { display: none; }
+            body { background: white; }
+            table { font-size: 12px; }
         }
     </style>
 </head>
 <body>
+    <div id="connectionStatus">🟢 Connected</div>
     <div class="keyboard-hint">💡 Ctrl+R: Refresh | Ctrl+E: Export CSV | Ctrl+D: Dark Mode</div>
 
     <div class="container">
@@ -704,7 +741,7 @@
     <div class="modal" id="deleteModal">
         <div class="modal-content">
             <h2>Delete Ticket</h2>
-            <p style="margin-bottom: 20px;">Are you sure?</p>
+            <p style="color: #666; margin-bottom: 20px;">Are you sure you want to delete this ticket?</p>
             <input type="hidden" id="deleteTicketId">
             <div class="modal-buttons">
                 <button class="btn secondary" onclick="closeDeleteModal()">Cancel</button>
@@ -716,6 +753,24 @@
     <script>
         let allTickets = [];
         let allEmployees = [];
+
+        // ========== CONNECTION STATUS ==========
+        setInterval(async () => {
+            try {
+                const res = await fetch('/health');
+                const status = document.getElementById('connectionStatus');
+                if (res.ok) {
+                    status.textContent = '🟢 Connected';
+                    status.style.background = '#2E7D32';
+                } else {
+                    status.textContent = '🔴 Disconnected';
+                    status.style.background = '#C41E3A';
+                }
+            } catch (error) {
+                document.getElementById('connectionStatus').textContent = '🔴 Disconnected';
+                document.getElementById('connectionStatus').style.background = '#C41E3A';
+            }
+        }, 5000);
 
         // ========== DARK MODE ==========
         function toggleDarkMode() {
@@ -746,7 +801,10 @@
         });
 
         // ========== INIT ==========
-        document.addEventListener('DOMContentLoaded', loadData);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+
         document.getElementById('searchInput').addEventListener('input', () => {
             renderTickets();
         });
@@ -759,8 +817,19 @@
                     fetch('/api/employees')
                 ]);
 
+                if (!ticketsRes.ok || !empRes.ok) {
+                    throw new Error('API returned error');
+                }
+
                 const ticketsData = await ticketsRes.json();
                 const empData = await empRes.json();
+
+                if (!ticketsData.ok) {
+                    throw new Error(ticketsData.error || 'Failed to load tickets');
+                }
+                if (!empData.ok) {
+                    throw new Error(empData.error || 'Failed to load employees');
+                }
 
                 allTickets = ticketsData.tickets || [];
                 allEmployees = empData.employees || [];
@@ -769,9 +838,11 @@
                 renderTickets();
                 renderTeamSection();
                 populateEmployeeSelect();
+                
+                showToast('Data loaded successfully ✅', 'success');
             } catch (error) {
                 console.error("Error loading data:", error);
-                showToast('Error loading data', 'error');
+                showToast(`Error: ${error.message}`, 'error');
             }
         }
 
@@ -842,94 +913,4 @@
                         </button>
                     </td>
                     <td>${t.assignedTo || '-'}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">Details</button>
-                            <button class="action-btn" onclick="openNotesModal('${t.ticketId}')">Notes</button>
-                            <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
-                            <button class="action-btn delete" onclick="openDeleteModal('${t.ticketId}')">Delete</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-
-        function renderTeamSection() {
-            if (allEmployees.length === 0) {
-                document.getElementById('teamGrid').innerHTML = '<div class="empty-message">No team members</div>';
-                return;
-            }
-
-            document.getElementById('teamGrid').innerHTML = allEmployees.map(emp => `
-                <div class="team-card">
-                    <h3>${emp.name}</h3>
-                    <p>${emp.email}</p>
-                    <div class="ticket-count">${emp.ticketsCount || 0} open tickets</div>
-                </div>
-            `).join('');
-        }
-
-        function populateEmployeeSelect() {
-            const select = document.getElementById('assignTo');
-            select.innerHTML = '<option value="">Select Employee...</option>' + 
-                allEmployees.map(emp => 
-                    `<option value="${emp.name}" data-email="${emp.email}">${emp.name}</option>`
-                ).join('');
-        }
-
-        // ========== EXPORT TO CSV ==========
-        function exportToCSV() {
-            let csv = 'Ticket ID,Phone,Street,Building,Apartment,Issue,Status,Assigned To,Notes\n';
-            
-            allTickets.forEach(t => {
-                csv += `"${t.ticketId}","${t.phone}","${t.street}","${t.building}","${t.apartment}","${t.issue}","${t.status}","${t.assignedTo}","${t.notes}"\n`;
-            });
-
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement('a');
-            const url = URL.createObjectURL(blob);
-            
-            link.setAttribute('href', url);
-            link.setAttribute('download', `bamakor-tickets-${new Date().toISOString().split('T')[0]}.csv`);
-            link.style.visibility = 'hidden';
-            
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showToast('CSV exported successfully', 'success');
-        }
-
-        // ========== MODALS ==========
-        function openAssignModal(ticketId) {
-            document.getElementById('assignTicketId').value = ticketId;
-            document.getElementById('assignModal').classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('assignModal').classList.remove('active');
-        }
-
-        function openDetailsModal(ticketId) {
-            const ticket = allTickets.find(t => t.ticketId === ticketId);
-            if (!ticket) return;
-
-            document.getElementById('ticketDetails').innerHTML = `
-                <div class="detail-item">
-                    <div class="detail-label">Ticket ID</div>
-                    <div class="detail-value">${ticket.ticketId}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Phone</div>
-                    <div class="detail-value">${ticket.phone}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Address</div>
-                    <div class="detail-value">${ticket.street}, Building ${ticket.building}, Apt ${ticket.apartment}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Issue</div>
-                    <div class="detail-value">${ticket.issue}</div>
-                </div>
-                <div class="detail-item">
-                    
+                    <td
