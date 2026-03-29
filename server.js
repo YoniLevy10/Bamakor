@@ -95,7 +95,7 @@ app.get("/api/tickets", async (req, res) => {
 });
 
 /**
- * ✨ שליפת רשימת עובדים
+ * שליפת רשימת עובדים
  */
 app.get("/api/employees", async (req, res) => {
   try {
@@ -160,16 +160,16 @@ app.post("/api/tickets/status", async (req, res) => {
 });
 
 /**
- * ✨ הקצאת פנייה לעובד ושליחת מייל דרך Google Apps Script
+ * הקצאת פנייה לעובד ושליחת מייל דרך Google Apps Script
  */
 app.post("/api/tickets/assign", async (req, res) => {
   try {
     const { ticketId, assignedTo, email } = req.body || {};
 
-    console.log("🔵 Assign request received:", { ticketId, assignedTo, email });
+    console.log("Assign request received:", { ticketId, assignedTo, email });
 
     if (!ticketId || !assignedTo || !email) {
-      console.log("❌ Missing fields");
+      console.log("Missing fields");
       return res.status(400).json({
         ok: false,
         error: "Missing ticketId, assignedTo, or email"
@@ -181,7 +181,7 @@ app.post("/api/tickets/assign", async (req, res) => {
     }
 
     // עדכן ב-Google Sheets
-    console.log("📊 Updating Google Sheets...");
+    console.log("Updating Google Sheets...");
     const updateResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: {
@@ -198,17 +198,17 @@ app.post("/api/tickets/assign", async (req, res) => {
     const updateData = await updateResponse.json();
 
     if (!updateData.ok) {
-      console.log("❌ Sheet update failed:", updateData);
+      console.log("Sheet update failed:", updateData);
       return res.status(400).json({
         ok: false,
         error: updateData.error || "Failed to assign ticket"
       });
     }
 
-    console.log("✅ Sheet updated, sending email...");
+    console.log("Sheet updated, sending email...");
 
-    // ✨ שלח מייל דרך Google Apps Script (חינמי וללא הגבלה)
-    console.log("📧 Sending email via Apps Script...");
+    // שלח מייל דרך Google Apps Script (חינמי וללא הגבלה)
+    console.log("Sending email via Apps Script...");
     const emailResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: {
@@ -225,21 +225,21 @@ app.post("/api/tickets/assign", async (req, res) => {
     const emailData = await emailResponse.json();
 
     if (!emailData.ok) {
-      console.error("❌ Email send failed:", emailData);
+      console.error("Email send failed:", emailData);
       return res.status(500).json({
         ok: false,
         error: "Ticket assigned but email failed"
       });
     }
 
-    console.log("✅ Email sent successfully");
+    console.log("Email sent successfully");
     res.json({
       ok: true,
       message: "Ticket assigned and email sent successfully"
     });
 
   } catch (error) {
-    console.error("❌ POST /api/tickets/assign error:", error);
+    console.error("POST /api/tickets/assign error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -431,8 +431,8 @@ function generateTicketId() {
 
 function getLanguageSelectionText() {
   return (
-    "ברוכים הבאים למוקד התקלות של Bamakor 🛠️\n" +
-    "Welcome to Bamakor maintenance desk 🛠️\n\n" +
+    "ברוכים הבאים למוקד התקלות של Bamakor\n" +
+    "Welcome to Bamakor maintenance desk\n\n" +
     "לבחירת שפה / Choose language:\n" +
     "1 - עברית\n" +
     "2 - English"
@@ -507,7 +507,7 @@ function buildPreSummaryMessage(lang, ticketId, street, building, apartment, iss
 function buildFinalSummaryMessage(lang, ticketId, street, building, apartment, issue, imageUrl) {
   if (lang === "en") {
     return (
-      `✅ Your report has been received and forwarded for treatment.\n\n` +
+      `Your report has been received and forwarded for treatment.\n\n` +
       `Ticket number: ${ticketId}\n\n` +
       `Report details:\n` +
       `Street: ${street}\n` +
@@ -520,7 +520,7 @@ function buildFinalSummaryMessage(lang, ticketId, street, building, apartment, i
   }
 
   return (
-    `✅ הפנייה התקבלה והועברה לטיפול.\n\n` +
+    `הפנייה התקבלה והועברה לטיפול.\n\n` +
     `מספר פנייה: ${ticketId}\n\n` +
     `פרטי הפנייה:\n` +
     `רחוב: ${street}\n` +
