@@ -1,5 +1,6 @@
 const express = require("express");
 const path = require("path");
+const jwt = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
@@ -9,6 +10,7 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
 const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
+const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-this";
 
 // זיכרון זמני לניהול שיחה לפי טלפון
 const sessions = new Map();
@@ -26,6 +28,84 @@ app.get("/dashboard.html", (req, res) => {
 app.get("/health", (req, res) => {
   res.status(200).json({ ok: true });
 });
+
+// ========== GOOGLE AUTH ==========
+
+app.post("/api/auth/google", async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ ok: false, error: "No token provided" });
+    }
+
+    if (!APPS_SCRIPT_URL) {
+      return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL" });
+    }
+
+    // Verify token with Google (בעתיד - כרגע נשתמש ב-apps script)
+    const verifyResponse = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "getUser",
+        token: token
+      })
+    });
+
+    const userData = await verifyResponse.json();
+
+    if (!userData.ok || !userData.user) {
+      return res.status(401).json({ ok: false, error: "User not found or unauthorized" });
+    }
+
+    // Create JWT Token
+    const jwtToken = jwt.sign(
+      { 
+        email: userData.user.email, 
+        role: userData.user.role, 
+        name: userData.user.name 
+      },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.json({
+      ok: true,
+      token: jwtToken,
+      user: {
+        email: userData.user.email,
+        name: userData.user.name,
+        role: userData.user.role
+      }
+    });
+
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    res.status(401).json({ ok: false, error: "Authentication failed" });
+  }
+});
+
+// ========== VERIFY JWT MIDDLEWARE ==========
+
+function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ ok: false, error: "No token provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({ ok: false, error: "Invalid or expired token" });
+  }
+}
+
+// ========== WEBHOOK ENDPOINTS ==========
 
 app.get("/webhook", (req, res) => {
   const mode = req.query["hub.mode"];
@@ -75,10 +155,9 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-/**
- * שליפת כל הפניות לדשבורד
- */
-app.get("/api/tickets", async (req, res) => {
+// ========== PROTECTED API ENDPOINTS ==========
+
+app.get("/api/tickets", verifyToken, async (req, res) => {
   try {
     if (!APPS_SCRIPT_URL) {
       return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
@@ -94,10 +173,7 @@ app.get("/api/tickets", async (req, res) => {
   }
 });
 
-/**
- * שליפת רשימת עובדים
- */
-app.get("/api/employees", async (req, res) => {
+app.get("/api/employees", verifyToken, async (req, res) => {
   try {
     if (!APPS_SCRIPT_URL) {
       return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
@@ -113,10 +189,7 @@ app.get("/api/employees", async (req, res) => {
   }
 });
 
-/**
- * עדכון סטטוס פנייה מהדשבורד
- */
-app.post("/api/tickets/status", async (req, res) => {
+app.post("/api/tickets/status", verifyToken, async (req, res) => {
   try {
     if (!APPS_SCRIPT_URL) {
       return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
@@ -159,17 +232,13 @@ app.post("/api/tickets/status", async (req, res) => {
   }
 });
 
-/**
- * הקצאת פנייה לעובד ושליחת מייל דרך Google Apps Script
- */
-app.post("/api/tickets/assign", async (req, res) => {
+app.post("/api/tickets/assign", verifyToken, async (req, res) => {
   try {
     const { ticketId, assignedTo, email } = req.body || {};
 
     console.log("Assign request received:", { ticketId, assignedTo, email });
 
     if (!ticketId || !assignedTo || !email) {
-      console.log("Missing fields");
       return res.status(400).json({
         ok: false,
         error: "Missing ticketId, assignedTo, or email"
@@ -180,7 +249,6 @@ app.post("/api/tickets/assign", async (req, res) => {
       return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
     }
 
-    // עדכן ב-Google Sheets
     console.log("Updating Google Sheets...");
     const updateResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -207,8 +275,6 @@ app.post("/api/tickets/assign", async (req, res) => {
 
     console.log("Sheet updated, sending email...");
 
-    // שלח מייל דרך Google Apps Script
-    console.log("Sending email via Apps Script...");
     const emailResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: {
@@ -244,10 +310,7 @@ app.post("/api/tickets/assign", async (req, res) => {
   }
 });
 
-/**
- * הוספת/עדכון הערות לפנייה
- */
-app.post("/api/tickets/notes", async (req, res) => {
+app.post("/api/tickets/notes", verifyToken, async (req, res) => {
   try {
     const { ticketId, notes } = req.body || {};
 
@@ -282,10 +345,7 @@ app.post("/api/tickets/notes", async (req, res) => {
   }
 });
 
-/**
- * מחיקת פנייה
- */
-app.post("/api/tickets/delete", async (req, res) => {
+app.post("/api/tickets/delete", verifyToken, async (req, res) => {
   try {
     const { ticketId } = req.body || {};
 
@@ -318,6 +378,8 @@ app.post("/api/tickets/delete", async (req, res) => {
     res.status(500).json({ ok: false, error: error.message });
   }
 });
+
+// ========== WHATSAPP CONVERSATION HANDLERS ==========
 
 async function handleConversation(phone, message) {
   let session = sessions.get(phone);
