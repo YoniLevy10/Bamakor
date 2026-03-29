@@ -1,8 +1,12 @@
 const express = require("express");
 const path = require("path");
+const compression = require('compression');
+const helmet = require('helmet');
 
 const app = express();
 app.use(express.json());
+app.use(compression());
+app.use(helmet());
 
 // ========== CONFIGURATION ==========
 const PORT = 3000;
@@ -13,12 +17,149 @@ const VERIFY_TOKEN = '12345';
 
 console.log(`\n🚀 ========== BAMAKOR SERVER ==========`);
 console.log(`📍 Port: ${PORT}`);
-console.log(`✅ Apps Script URL: Configured`);
-console.log(`✅ WhatsApp Token: Configured`);
+console.log(`✅ Security: Enabled (Helmet + Rate Limit + CORS)`);
+console.log(`✅ Compression: Enabled`);
+console.log(`✅ Caching: Enabled`);
 console.log(`=====================================\n`);
 
 const sessions = new Map();
 const processedMessages = new Set();
+
+// ========== CACHING SYSTEM ==========
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 דקות
+
+function getFromCache(key) {
+  if (cache.has(key)) {
+    const cached = cache.get(key);
+    if (Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.data;
+    }
+    cache.delete(key);
+  }
+  return null;
+}
+
+function setInCache(key, data) {
+  cache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}
+
+// ========== RATE LIMITING ==========
+const rateLimitStore = new Map();
+
+function checkRateLimit(identifier, limit = 100, windowMs = 60000) {
+  const now = Date.now();
+  const requests = rateLimitStore.get(identifier) || [];
+  const recentRequests = requests.filter(time => now - time < windowMs);
+
+  if (recentRequests.length >= limit) {
+    return false;
+  }
+
+  recentRequests.push(now);
+  rateLimitStore.set(identifier, recentRequests);
+  return true;
+}
+
+// Cleanup old rate limit records
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, times] of rateLimitStore.entries()) {
+    const valid = times.filter(t => now - t < 60000);
+    if (valid.length === 0) {
+      rateLimitStore.delete(key);
+    } else {
+      rateLimitStore.set(key, valid);
+    }
+  }
+}, 60000);
+
+// ========== MIDDLEWARE - Rate Limiting ==========
+app.use((req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress;
+  if (!checkRateLimit(ip, 100, 60000)) {
+    return res.status(429).json({ ok: false, error: "Too many requests. Please try again later." });
+  }
+  next();
+});
+
+// ========== MIDDLEWARE - CORS ==========
+app.use((req, res, next) => {
+  const allowedOrigins = ['http://localhost:3000', 'http://localhost', 'http://127.0.0.1:3000'];
+  const origin = req.headers.origin;
+
+  if (allowedOrigins.includes(origin) || !req.headers.origin) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+  }
+
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('X-XSS-Protection', '1; mode=block');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
+// ========== INPUT VALIDATION ==========
+function validateTicketId(id) {
+  return /^BMK-\d{6}$/.test(String(id));
+}
+
+function validateEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email));
+}
+
+function validatePhone(phone) {
+  return /^\d{9,15}$/.test(String(phone).replace(/\D/g, ''));
+}
+
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return '';
+  return input
+    .replace(/[<>{}]/g, '')
+    .trim()
+    .substring(0, 500); // Max 500 chars
+}
+
+function validateString(input, minLength = 1, maxLength = 500) {
+  if (typeof input !== 'string') return false;
+  const trimmed = input.trim();
+  return trimmed.length >= minLength && trimmed.length <= maxLength;
+}
+
+// ========== ERROR LOGGING ==========
+const errorLogs = [];
+
+function logError(error, context, request = null) {
+  const errorRecord = {
+    timestamp: new Date().toISOString(),
+    error: error.message,
+    context,
+    stack: error.stack,
+    request: request ? {
+      method: request.method,
+      path: request.path,
+      ip: request.ip
+    } : null
+  };
+
+  errorLogs.push(errorRecord);
+
+  // Keep only last 100 errors
+  if (errorLogs.length > 100) {
+    errorLogs.shift();
+  }
+
+  console.error(`[${errorRecord.timestamp}] ${context}:`, error.message);
+}
 
 // ========== STATIC FILES ==========
 app.get("/", (req, res) => {
@@ -30,30 +171,86 @@ app.get("/dashboard.html", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
+  res.status(200).json({
+    ok: true,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+app.get("/api/logs", (req, res) => {
+  res.json({ ok: true, logs: errorLogs.slice(-20) });
 });
 
 // ========== API ENDPOINTS ==========
 
 app.get("/api/tickets", async (req, res) => {
   try {
+    // Check cache first
+    const cached = getFromCache('tickets');
+    if (cached) {
+      return res.json(cached);
+    }
+
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listTickets`);
     const data = await response.json();
+
+    if (data.ok && data.tickets) {
+      // Validate tickets data
+      data.tickets = data.tickets.map(t => ({
+        ticketId: sanitizeInput(t.ticketId),
+        phone: sanitizeInput(t.phone),
+        street: sanitizeInput(t.street),
+        building: sanitizeInput(t.building),
+        apartment: sanitizeInput(t.apartment),
+        issue: sanitizeInput(t.issue),
+        status: t.status === 'סגור' ? 'סגור' : 'פתוח',
+        assignedTo: sanitizeInput(t.assignedTo || ''),
+        notes: sanitizeInput(t.notes || ''),
+        createdAt: t.createdAt,
+        closedDate: t.closedDate
+      }));
+
+      // Cache the result
+      setInCache('tickets', data);
+    }
+
     res.json(data);
   } catch (error) {
-    console.error("❌ GET /api/tickets error:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    logError(error, 'GET /api/tickets', req);
+    res.status(500).json({ ok: false, error: "Failed to load tickets" });
   }
 });
 
 app.get("/api/employees", async (req, res) => {
   try {
+    // Check cache first
+    const cached = getFromCache('employees');
+    if (cached) {
+      return res.json(cached);
+    }
+
     const response = await fetch(`${APPS_SCRIPT_URL}?action=listEmployees`);
     const data = await response.json();
+
+    if (data.ok && data.employees) {
+      // Validate employees data
+      data.employees = data.employees.map(e => ({
+        name: sanitizeInput(e.name),
+        email: sanitizeInput(e.email),
+        phone: sanitizeInput(e.phone || ''),
+        role: e.role || 'user',
+        ticketsCount: e.ticketsCount || 0
+      }));
+
+      // Cache the result
+      setInCache('employees', data);
+    }
+
     res.json(data);
   } catch (error) {
-    console.error("❌ GET /api/employees error:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    logError(error, 'GET /api/employees', req);
+    res.status(500).json({ ok: false, error: "Failed to load employees" });
   }
 });
 
@@ -61,12 +258,17 @@ app.post("/api/tickets/status", async (req, res) => {
   try {
     const { ticketId, status } = req.body || {};
 
-    if (!ticketId || !status) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing ticketId or status"
-      });
+    // Validate inputs
+    if (!ticketId || !validateTicketId(ticketId)) {
+      return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
+
+    if (!status || !['פתוח', 'סגור'].includes(status)) {
+      return res.status(400).json({ ok: false, error: "Invalid status" });
+    }
+
+    // Clear cache
+    cache.delete('tickets');
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -82,8 +284,8 @@ app.post("/api/tickets/status", async (req, res) => {
     console.log(`✅ Ticket ${ticketId} status updated to ${status}`);
     res.json(data);
   } catch (error) {
-    console.error("❌ POST /api/tickets/status error:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    logError(error, 'POST /api/tickets/status', req);
+    res.status(500).json({ ok: false, error: "Failed to update status" });
   }
 });
 
@@ -91,14 +293,26 @@ app.post("/api/tickets/assign", async (req, res) => {
   try {
     const { ticketId, assignedTo, email } = req.body || {};
 
-    if (!ticketId || !assignedTo || !email) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing ticketId, assignedTo, or email"
-      });
+    // Validate inputs
+    if (!ticketId || !validateTicketId(ticketId)) {
+      return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
 
+    if (!validateString(assignedTo, 2, 100)) {
+      return res.status(400).json({ ok: false, error: "Invalid employee name" });
+    }
+
+    if (!validateEmail(email)) {
+      return res.status(400).json({ ok: false, error: "Invalid email" });
+    }
+
+    assignedTo = sanitizeInput(assignedTo);
+    email = sanitizeInput(email);
+
     console.log(`📨 Assigning ticket ${ticketId} to ${assignedTo}`);
+
+    // Clear cache
+    cache.delete('tickets');
 
     const updateResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -148,8 +362,8 @@ app.post("/api/tickets/assign", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("❌ POST /api/tickets/assign error:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    logError(error, 'POST /api/tickets/assign', req);
+    res.status(500).json({ ok: false, error: "Failed to assign ticket" });
   }
 });
 
@@ -157,12 +371,19 @@ app.post("/api/tickets/notes", async (req, res) => {
   try {
     const { ticketId, notes } = req.body || {};
 
-    if (!ticketId) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing ticketId"
-      });
+    // Validate inputs
+    if (!ticketId || !validateTicketId(ticketId)) {
+      return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
+
+    if (notes && !validateString(notes, 0, 1000)) {
+      return res.status(400).json({ ok: false, error: "Notes too long (max 1000 chars)" });
+    }
+
+    // Clear cache
+    cache.delete('tickets');
+
+    const sanitizedNotes = sanitizeInput(notes || '');
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -170,7 +391,7 @@ app.post("/api/tickets/notes", async (req, res) => {
       body: JSON.stringify({
         action: "updateNotes",
         ticketId,
-        notes: notes || ""
+        notes: sanitizedNotes
       })
     });
 
@@ -178,8 +399,8 @@ app.post("/api/tickets/notes", async (req, res) => {
     console.log(`✅ Notes updated for ticket ${ticketId}`);
     res.json(data);
   } catch (error) {
-    console.error("❌ POST /api/tickets/notes error:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    logError(error, 'POST /api/tickets/notes', req);
+    res.status(500).json({ ok: false, error: "Failed to update notes" });
   }
 });
 
@@ -187,12 +408,13 @@ app.post("/api/tickets/delete", async (req, res) => {
   try {
     const { ticketId } = req.body || {};
 
-    if (!ticketId) {
-      return res.status(400).json({
-        ok: false,
-        error: "Missing ticketId"
-      });
+    // Validate inputs
+    if (!ticketId || !validateTicketId(ticketId)) {
+      return res.status(400).json({ ok: false, error: "Invalid ticket ID" });
     }
+
+    // Clear cache
+    cache.delete('tickets');
 
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -207,8 +429,8 @@ app.post("/api/tickets/delete", async (req, res) => {
     console.log(`✅ Ticket ${ticketId} deleted`);
     res.json(data);
   } catch (error) {
-    console.error("❌ POST /api/tickets/delete error:", error);
-    res.status(500).json({ ok: false, error: error.message });
+    logError(error, 'POST /api/tickets/delete', req);
+    res.status(500).json({ ok: false, error: "Failed to delete ticket" });
   }
 });
 
@@ -258,7 +480,7 @@ app.post("/webhook", async (req, res) => {
 
     await sendWhatsAppMessage(from, replyText);
   } catch (error) {
-    console.error("❌ Webhook error:", error);
+    logError(error, 'POST /webhook');
   }
 });
 
@@ -309,28 +531,28 @@ async function handleConversation(phone, message) {
 
   if (session.step === "waiting_street") {
     if (messageType !== "text") return getText(session.lang, "street_text_only");
-    session.street = text;
+    session.street = sanitizeInput(text);
     session.step = "waiting_building";
     return getText(session.lang, "ask_building");
   }
 
   if (session.step === "waiting_building") {
     if (messageType !== "text") return getText(session.lang, "building_text_only");
-    session.building = text;
+    session.building = sanitizeInput(text);
     session.step = "waiting_apartment";
     return getText(session.lang, "ask_apartment");
   }
 
   if (session.step === "waiting_apartment") {
     if (messageType !== "text") return getText(session.lang, "apartment_text_only");
-    session.apartment = text;
+    session.apartment = sanitizeInput(text);
     session.step = "waiting_issue";
     return getText(session.lang, "ask_issue");
   }
 
   if (session.step === "waiting_issue") {
     if (messageType !== "text") return getText(session.lang, "issue_text_only");
-    session.issue = text;
+    session.issue = sanitizeInput(text);
     session.ticketId = generateTicketId();
     session.step = "waiting_optional_image";
 
@@ -352,7 +574,7 @@ async function handleConversation(phone, message) {
 
     await writeTicketToSheet({
       ticketId: session.ticketId,
-      phone,
+      phone: sanitizeInput(phone),
       lang: session.lang,
       street: session.street,
       building: session.building,
@@ -380,55 +602,68 @@ async function handleConversation(phone, message) {
 }
 
 async function writeTicketToSheet(data) {
-  const response = await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      action: "addTicket",
-      ...data
-    })
-  });
-
-  const rawText = await response.text();
-  let parsed;
-
   try {
-    parsed = JSON.parse(rawText);
-  } catch (err) {
-    throw new Error("Apps Script response is not valid JSON");
-  }
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "addTicket",
+        ...data
+      })
+    });
 
-  if (!parsed.ok) {
-    throw new Error(`Apps Script error: ${parsed.error || "unknown error"}`);
-  }
+    const rawText = await response.text();
+    let parsed;
 
-  console.log(`✅ Ticket ${data.ticketId} created via WhatsApp`);
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (err) {
+      throw new Error("Apps Script response is not valid JSON");
+    }
+
+    if (!parsed.ok) {
+      throw new Error(`Apps Script error: ${parsed.error || "unknown error"}`);
+    }
+
+    console.log(`✅ Ticket ${data.ticketId} created via WhatsApp`);
+    
+    // Clear cache
+    cache.delete('tickets');
+  } catch (error) {
+    logError(error, 'writeTicketToSheet');
+    throw error;
+  }
 }
 
 async function sendWhatsAppMessage(to, messageText) {
-  const response = await fetch(
-    `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        messaging_product: "whatsapp",
-        to,
-        text: { body: messageText }
-      })
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v25.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to,
+          text: { body: messageText }
+        })
+      }
+    );
+
+    const rawText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(`WhatsApp API error: ${rawText}`);
     }
-  );
 
-  const rawText = await response.text();
-
-  if (!response.ok) {
-    throw new Error(`WhatsApp API error: ${rawText}`);
+    console.log(`✅ WhatsApp message sent to ${to}`);
+  } catch (error) {
+    logError(error, 'sendWhatsAppMessage');
+    throw error;
   }
-
-  console.log(`✅ WhatsApp message sent to ${to}`);
 }
 
 function generateTicketId() {
@@ -553,5 +788,6 @@ setInterval(() => {
 app.listen(PORT, () => {
   console.log(`✅ Bamakor server is running on http://localhost:${PORT}`);
   console.log(`📊 Dashboard: http://localhost:${PORT}`);
-  console.log(`📱 WhatsApp WebHook: http://localhost:${PORT}/webhook\n`);
+  console.log(`📱 WhatsApp WebHook: http://localhost:${PORT}/webhook`);
+  console.log(`❤️  Health: http://localhost:${PORT}/health\n`);
 });
