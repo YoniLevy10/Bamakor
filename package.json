@@ -7,10 +7,12 @@
     "start": "node server.js",
     "dev": "node server.js"
   },
-  "keywords": ["maintenance", "tickets", "whatsapp"],
+  "keywords": ["maintenance", "tickets", "whatsapp", "management"],
   "author": "Yoni Levy",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "compression": "^1.7.4",
+    "helmet": "^7.0.0"
   }
 }
