@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#C41E3A">
-    <link rel="manifest" href="/manifest.json">
     <title>Bamakor Dashboard</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -17,86 +15,6 @@
         }
         .container { max-width: 1400px; margin: 0 auto; }
         
-        /* Login Page */
-        #loginPage {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #C41E3A 0%, #A01730 100%);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 9999;
-        }
-
-        .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            max-width: 400px;
-            width: 90%;
-            animation: slideUp 0.5s ease;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .login-box h1 {
-            color: #C41E3A;
-            margin-bottom: 10px;
-            font-size: 32px;
-            font-weight: 700;
-        }
-
-        .login-box p {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        #googleLoginDiv {
-            margin: 30px 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        .login-footer {
-            color: #999;
-            font-size: 12px;
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
-        }
-
-        .login-error {
-            background: #FFE8E8;
-            color: #C41E3A;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            display: none;
-        }
-        
-        /* Dashboard */
-        #dashboardPage {
-            display: none;
-        }
-
         header {
             background: white;
             padding: 25px 30px;
@@ -115,15 +33,6 @@
             font-weight: 700;
         }
         
-        .hamburger-btn {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #2a2a2a;
-        }
-        
         .controls {
             display: flex;
             gap: 12px;
@@ -136,8 +45,8 @@
             border-radius: 8px;
             width: 280px;
             font-size: 14px;
-            transition: all 0.3s;
         }
+        
         .search-box:focus {
             outline: none;
             border-color: #C41E3A;
@@ -155,42 +64,13 @@
             transition: all 0.3s;
             font-size: 14px;
         }
+        
         .btn:hover { 
             background: #A01730;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(196, 30, 58, 0.2);
         }
         
-        .btn.danger {
-            background: #C41E3A;
-        }
-        .btn.danger:hover {
-            background: #8B0000;
-        }
-
-        .btn.logout {
-            background: #999;
-        }
-        .btn.logout:hover {
-            background: #777;
-        }
-
-        /* Offline Indicator */
-        #offlineIndicator {
-            background: #FFF3CD;
-            color: #856404;
-            padding: 14px 18px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 14px;
-            border-left: 4px solid #FFC107;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            display: none;
-        }
-        
-        /* Tabs */
         .tabs {
             display: flex;
             gap: 8px;
@@ -200,7 +80,6 @@
             margin-bottom: 30px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             flex-wrap: wrap;
-            overflow-x: auto;
         }
         
         .tab {
@@ -211,7 +90,6 @@
             cursor: pointer;
             font-weight: 600;
             transition: all 0.3s;
-            white-space: nowrap;
             font-size: 14px;
             color: #666;
         }
@@ -227,7 +105,6 @@
             color: #C41E3A;
         }
         
-        /* Stats */
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -242,12 +119,6 @@
             text-align: center;
             border-top: 4px solid #C41E3A;
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: all 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.12);
         }
         
         .stat-label { 
@@ -255,23 +126,22 @@
             font-size: 12px; 
             margin-bottom: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
+        
         .stat-number { 
             font-size: 32px; 
             font-weight: bold; 
             color: #C41E3A; 
         }
         
-        /* Sections */
         .section {
             display: none;
         }
+        
         .section.active {
             display: block;
         }
         
-        /* Table */
         .table-wrapper {
             background: white;
             border-radius: 12px;
@@ -294,7 +164,6 @@
             font-size: 13px;
             border-bottom: 2px solid #e0e0e0;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
         
         td {
@@ -315,7 +184,6 @@
             cursor: pointer;
             font-weight: 600;
             font-size: 12px;
-            transition: all 0.3s ease;
         }
         
         .status-open {
@@ -325,7 +193,6 @@
         
         .status-open:hover {
             background: #FFD6D6;
-            transform: scale(1.05);
         }
         
         .status-closed {
@@ -335,7 +202,6 @@
         
         .status-closed:hover {
             background: #D1F0D1;
-            transform: scale(1.05);
         }
         
         .action-buttons {
@@ -353,13 +219,10 @@
             cursor: pointer;
             font-size: 12px;
             font-weight: 600;
-            transition: all 0.3s;
         }
         
         .action-btn:hover {
             background: #A01730;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 6px rgba(196, 30, 58, 0.2);
         }
         
         .action-btn.delete {
@@ -374,7 +237,6 @@
             text-align: center;
             padding: 60px 40px;
             color: #999;
-            font-size: 16px;
         }
         
         .spinner {
@@ -392,7 +254,6 @@
             100% { transform: rotate(360deg); } 
         }
         
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -402,7 +263,6 @@
             height: 100%;
             background: rgba(0,0,0,0.4);
             z-index: 1000;
-            backdrop-filter: blur(4px);
         }
         
         .modal.active { 
@@ -418,8 +278,6 @@
             max-width: 600px;
             width: 90%;
             box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            max-height: 85vh;
-            overflow-y: auto;
         }
         
         .modal-content h2 { 
@@ -427,7 +285,6 @@
             margin-bottom: 24px;
             border-bottom: 3px solid #C41E3A;
             padding-bottom: 16px;
-            font-size: 20px;
         }
         
         .modal-content input,
@@ -440,7 +297,6 @@
             border-radius: 8px;
             font-size: 14px;
             font-family: inherit;
-            transition: all 0.3s;
         }
         
         .modal-content textarea {
@@ -471,21 +327,16 @@
         
         .detail-label {
             font-weight: 700;
-            color: #2a2a2a;
-            font-size: 13px;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
             color: #999;
+            font-size: 12px;
+            margin-bottom: 8px;
         }
         
         .detail-value {
             color: #333;
             font-size: 14px;
-            line-height: 1.5;
         }
         
-        /* Team Section */
         .team-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -511,7 +362,6 @@
         .team-card h3 {
             color: #2a2a2a;
             margin-bottom: 8px;
-            font-size: 16px;
         }
         
         .team-card p {
@@ -526,92 +376,8 @@
             padding: 12px;
             border-radius: 8px;
             font-weight: 700;
-            font-size: 16px;
         }
         
-        /* Employee Tickets Modal */
-        .employee-tickets {
-            max-width: 800px;
-        }
-        
-        .employee-header {
-            background: linear-gradient(135deg, #C41E3A 0%, #A01730 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 24px;
-            text-align: center;
-        }
-        
-        .employee-header h2 {
-            border: none;
-            padding: 0;
-            margin: 0;
-            font-size: 22px;
-        }
-        
-        .employee-header p {
-            color: rgba(255,255,255,0.9);
-            margin-top: 8px;
-        }
-        
-        .tickets-list {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        
-        .ticket-item {
-            background: #f8f8f8;
-            padding: 16px;
-            border-radius: 8px;
-            border-left: 4px solid #C41E3A;
-            transition: all 0.3s;
-        }
-        
-        .ticket-item:hover {
-            background: #f0f0f0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        
-        .ticket-id {
-            font-weight: 700;
-            color: #2a2a2a;
-            font-size: 15px;
-            margin-bottom: 6px;
-        }
-        
-        .ticket-issue {
-            color: #666;
-            font-size: 13px;
-            margin-bottom: 8px;
-        }
-        
-        .ticket-details {
-            display: flex;
-            gap: 12px;
-            font-size: 12px;
-            color: #999;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        
-        .ticket-item .status-btn {
-            padding: 6px 12px;
-            font-size: 12px;
-            margin-left: auto;
-        }
-        
-        .closed-date {
-            background: #E8F5E9;
-            color: #2E7D32;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        /* Toast Notification */
         .toast {
             position: fixed;
             bottom: 20px;
@@ -661,294 +427,132 @@
             animation: slideOut 0.3s ease forwards;
         }
         
-        /* Mobile Responsive */
         @media (max-width: 768px) {
             body { padding: 12px; }
             header {
-                flex-direction: row;
+                flex-direction: column;
                 gap: 10px;
                 padding: 16px;
-                margin-bottom: 20px;
             }
-            h1 { 
-                font-size: 20px;
-                flex: 1;
-            }
-            .hamburger-btn {
-                display: block;
-            }
+            h1 { font-size: 20px; }
             .controls { 
                 flex-direction: column;
                 width: 100%;
-                gap: 10px;
             }
-            .search-box { 
-                width: 100%;
-                padding: 10px 12px;
-                font-size: 14px;
-            }
-            .btn {
-                padding: 10px 16px;
-                font-size: 13px;
-                width: 100%;
-            }
-            .tabs { 
-                display: none;
-                flex-direction: column;
-                padding: 12px;
-                gap: 8px;
-                margin-bottom: 20px;
-            }
-            .tabs.active {
-                display: flex;
-            }
-            .tab { 
-                padding: 12px;
-                font-size: 14px;
-                text-align: center;
-            }
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
-                margin-bottom: 20px;
-            }
-            .stat-card {
-                padding: 16px;
-            }
-            .stat-number { font-size: 24px; }
-            .stat-label { font-size: 11px; }
-            
-            table { font-size: 13px; }
-            td, th { padding: 12px 8px; }
-            
-            .action-buttons {
-                gap: 4px;
-            }
-            .action-btn {
-                padding: 6px 10px;
-                font-size: 11px;
-            }
-            
-            .team-grid {
-                grid-template-columns: 1fr;
-                gap: 12px;
-            }
-            
-            .team-card {
-                padding: 16px;
-            }
-            
-            .col-phone,
-            .col-street,
-            .col-building,
-            .col-apartment {
-                display: none;
-            }
-            
-            .modal-content {
-                padding: 24px;
-                width: 95%;
-            }
-            
-            .toast {
-                bottom: 10px;
-                right: 10px;
-                left: 10px;
-                width: auto;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            body { padding: 8px; }
-            header { 
-                padding: 12px;
-                flex-direction: column;
-                gap: 10px;
-            }
-            h1 { font-size: 18px; }
-            
-            .stat-card {
-                padding: 12px;
-            }
-            
-            .stat-number { font-size: 20px; }
-            .stat-label { font-size: 10px; }
-            
+            .search-box { width: 100%; }
+            .btn { width: 100%; }
+            .tabs { flex-direction: column; }
+            .stats { grid-template-columns: 1fr; }
             table { font-size: 12px; }
-            td, th { padding: 10px 6px; }
-            
-            .action-btn {
-                padding: 5px 8px;
-                font-size: 10px;
-            }
-
-            .login-box {
-                padding: 30px 20px;
-            }
-
-            .login-box h1 {
-                font-size: 24px;
-            }
-
-            #googleLoginDiv {
-                transform: scale(0.85);
-                transform-origin: center;
-            }
+            td, th { padding: 10px; }
         }
     </style>
 </head>
 <body>
-    <!-- Login Page -->
-    <div id="loginPage">
-        <div class="login-box">
-            <h1>Bamakor</h1>
-            <p>Maintenance Management System</p>
-            <div class="login-error" id="loginError"></div>
-            <div id="googleLoginDiv"></div>
-            <p class="login-footer">Sign in with your Google Account to access the dashboard</p>
+    <div class="container">
+        <header>
+            <h1>Bamakor Dashboard</h1>
+            <div class="controls">
+                <input type="text" class="search-box" id="searchInput" placeholder="Search tickets...">
+                <button class="btn" onclick="loadData()">Refresh</button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('tickets')">All Tickets</button>
+            <button class="tab" onclick="switchTab('open')">Open</button>
+            <button class="tab" onclick="switchTab('closed')">Closed</button>
+            <button class="tab" onclick="switchTab('team')">Team</button>
         </div>
-    </div>
 
-    <!-- Dashboard Page -->
-    <div id="dashboardPage">
-        <div class="container">
-            <header>
-                <h1>Bamakor Dashboard</h1>
-                <button class="hamburger-btn" onclick="toggleMenu()">☰</button>
-                <div class="controls">
-                    <input type="text" class="search-box" id="searchInput" placeholder="Search tickets...">
-                    <button class="btn" onclick="loadData()">Refresh</button>
-                    <button class="btn logout" onclick="logout()">Logout</button>
-                </div>
-            </header>
-
-            <div id="offlineIndicator"></div>
-
-            <div class="tabs" id="navTabs">
-                <button class="tab active" onclick="switchTab('tickets')">All Tickets</button>
-                <button class="tab" onclick="switchTab('open')">Open</button>
-                <button class="tab" onclick="switchTab('closed')">Closed</button>
-                <button class="tab" onclick="switchTab('history')">History</button>
-                <button class="tab" onclick="switchTab('team')">Team</button>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Tickets</div>
+                <div class="stat-number" id="total">0</div>
             </div>
-
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-label">Total Tickets</div>
-                    <div class="stat-number" id="total">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Open</div>
-                    <div class="stat-number" id="open">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Closed</div>
-                    <div class="stat-number" id="closed">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Team Members</div>
-                    <div class="stat-number" id="teamCount">0</div>
-                </div>
+            <div class="stat-card">
+                <div class="stat-label">Open</div>
+                <div class="stat-number" id="open">0</div>
             </div>
-
-            <!-- Tickets Section -->
-            <div id="ticketsSection" class="section active">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ticket ID</th>
-                                <th class="col-phone">Phone</th>
-                                <th class="col-street">Address</th>
-                                <th>Issue</th>
-                                <th>Status</th>
-                                <th>Assigned</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ticketsBody">
-                            <tr><td colspan="7" class="empty-message"><div class="spinner"></div>Loading...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="stat-card">
+                <div class="stat-label">Closed</div>
+                <div class="stat-number" id="closed">0</div>
             </div>
-
-            <!-- Open Section -->
-            <div id="openSection" class="section">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ticket ID</th>
-                                <th class="col-phone">Phone</th>
-                                <th class="col-street">Address</th>
-                                <th>Issue</th>
-                                <th>Status</th>
-                                <th>Assigned</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="openBody">
-                            <tr><td colspan="7" class="empty-message">No open tickets</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="stat-card">
+                <div class="stat-label">Team Members</div>
+                <div class="stat-number" id="teamCount">0</div>
             </div>
+        </div>
 
-            <!-- Closed Section -->
-            <div id="closedSection" class="section">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ticket ID</th>
-                                <th class="col-phone">Phone</th>
-                                <th class="col-street">Address</th>
-                                <th>Issue</th>
-                                <th>Status</th>
-                                <th>Assigned</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="closedBody">
-                            <tr><td colspan="7" class="empty-message">No closed tickets</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+        <div id="ticketsSection" class="section active">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Issue</th>
+                            <th>Status</th>
+                            <th>Assigned</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketsBody">
+                        <tr><td colspan="7" class="empty-message"><div class="spinner"></div>Loading...</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-            <!-- History Section -->
-            <div id="historySection" class="section">
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ticket ID</th>
-                                <th class="col-phone">Phone</th>
-                                <th class="col-street">Address</th>
-                                <th>Issue</th>
-                                <th>Closed Date</th>
-                                <th>Assigned To</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyBody">
-                            <tr><td colspan="7" class="empty-message">No history yet</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+        <div id="openSection" class="section">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Issue</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="openBody">
+                        <tr><td colspan="6" class="empty-message">No open tickets</td></tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-            <!-- Team Section -->
-            <div id="teamSection" class="section">
-                <div class="team-grid" id="teamGrid">
-                    <div class="empty-message">Loading team members...</div>
-                </div>
+        <div id="closedSection" class="section">
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket ID</th>
+                            <th>Phone</th>
+                            <th>Address</th>
+                            <th>Issue</th>
+                            <th>Closed Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="closedBody">
+                        <tr><td colspan="6" class="empty-message">No closed tickets</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="teamSection" class="section">
+            <div class="team-grid" id="teamGrid">
+                <div class="empty-message">Loading team members...</div>
             </div>
         </div>
     </div>
 
-    <!-- Assignment Modal -->
+    <!-- Modals -->
     <div class="modal" id="assignModal">
         <div class="modal-content">
             <h2>Assign Ticket</h2>
@@ -963,7 +567,6 @@
         </div>
     </div>
 
-    <!-- Ticket Details Modal -->
     <div class="modal" id="detailsModal">
         <div class="modal-content">
             <h2>Ticket Details</h2>
@@ -974,7 +577,6 @@
         </div>
     </div>
 
-    <!-- Notes Modal -->
     <div class="modal" id="notesModal">
         <div class="modal-content">
             <h2>Ticket Notes</h2>
@@ -987,320 +589,53 @@
         </div>
     </div>
 
-    <!-- Delete Confirmation Modal -->
     <div class="modal" id="deleteModal">
         <div class="modal-content">
             <h2>Delete Ticket</h2>
-            <p style="color: #666; margin-bottom: 20px;">Are you sure you want to delete this ticket? This action cannot be undone.</p>
+            <p style="color: #666; margin-bottom: 20px;">Are you sure?</p>
             <input type="hidden" id="deleteTicketId">
             <div class="modal-buttons">
                 <button class="btn" style="background: #999;" onclick="closeDeleteModal()">Cancel</button>
-                <button class="btn danger" onclick="confirmDelete()">Delete</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Employee Tickets Modal -->
-    <div class="modal" id="employeeTicketsModal">
-        <div class="modal-content employee-tickets">
-            <div class="employee-header">
-                <h2 id="employeeName">Employee Name</h2>
-                <p id="employeeEmail">email@example.com</p>
-            </div>
-            <div id="employeeTicketsContainer" class="tickets-list"></div>
-            <div class="modal-buttons" style="margin-top: 24px;">
-                <button class="btn" onclick="closeEmployeeModal()">Close</button>
+                <button class="btn" style="background: #8B0000;" onclick="confirmDelete()">Delete</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ========== CONFIGURATION ==========
-        const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE.apps.googleusercontent.com';
-        const OFFLINE_STORAGE_KEY = 'bamakor_tickets_cache';
-
-        // ========== STATE VARIABLES ==========
-        let currentUser = null;
-        let authToken = null;
         let allTickets = [];
         let allEmployees = [];
-        let allHistory = [];
-        let isOnline = navigator.onLine;
 
-        // ========== INITIALIZATION ==========
-        document.addEventListener('DOMContentLoaded', () => {
-            if (checkAuth()) {
-                initializeGoogleLogin();
-                loadData();
-            } else {
-                initializeGoogleLogin();
-            }
-
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
-            }
-
-            setupEventListeners();
+        // ========== INIT ==========
+        document.addEventListener('DOMContentLoaded', loadData);
+        document.getElementById('searchInput').addEventListener('input', () => {
+            renderTickets();
         });
-
-        // ========== EVENT LISTENERS ==========
-        function setupEventListeners() {
-            window.addEventListener('online', handleOnline);
-            window.addEventListener('offline', handleOffline);
-            document.getElementById('searchInput').addEventListener('input', () => {
-                renderTickets();
-                renderHistory();
-            });
-        }
-
-        // ========== GOOGLE AUTH ==========
-        function initializeGoogleLogin() {
-            if (!window.google) {
-                console.error('Google API not loaded');
-                return;
-            }
-
-            window.google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleCredentialResponse,
-                auto_select: false
-            });
-
-            const loginDiv = document.getElementById('googleLoginDiv');
-            if (loginDiv) {
-                window.google.accounts.id.renderButton(
-                    loginDiv,
-                    { 
-                        theme: 'outline', 
-                        size: 'large',
-                        width: '300',
-                        text: 'signin_with'
-                    }
-                );
-            }
-        }
-
-        async function handleCredentialResponse(response) {
-            try {
-                showToast('Signing in...', 'success');
-                
-                const result = await fetch('/api/auth/google', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ token: response.credential })
-                });
-
-                const data = await result.json();
-
-                if (data.ok) {
-                    authToken = data.token;
-                    currentUser = data.user;
-                    
-                    localStorage.setItem('authToken', authToken);
-                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-                    document.getElementById('loginPage').style.display = 'none';
-                    document.getElementById('dashboardPage').style.display = 'block';
-                    
-                    loadData();
-                    showToast('Welcome ' + currentUser.name + '!', 'success');
-                } else {
-                    showLoginError(data.error || 'Login failed');
-                    showToast('Login failed: ' + data.error, 'error');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                showLoginError('Connection error. Please try again.');
-                showToast('Login error', 'error');
-            }
-        }
-
-        function logout() {
-            window.google?.accounts?.id?.disableAutoSelect?.();
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('currentUser');
-            authToken = null;
-            currentUser = null;
-            document.getElementById('dashboardPage').style.display = 'none';
-            document.getElementById('loginPage').style.display = 'flex';
-            location.reload();
-        }
-
-        function checkAuth() {
-            const token = localStorage.getItem('authToken');
-            const user = localStorage.getItem('currentUser');
-            
-            if (token && user) {
-                try {
-                    authToken = token;
-                    currentUser = JSON.parse(user);
-                    document.getElementById('loginPage').style.display = 'none';
-                    document.getElementById('dashboardPage').style.display = 'block';
-                    return true;
-                } catch (e) {
-                    console.error('Auth check error:', e);
-                    return false;
-                }
-            }
-            
-            document.getElementById('loginPage').style.display = 'flex';
-            document.getElementById('dashboardPage').style.display = 'none';
-            return false;
-        }
-
-        function showLoginError(message) {
-            const errorDiv = document.getElementById('loginError');
-            if (errorDiv) {
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
-                setTimeout(() => {
-                    errorDiv.style.display = 'none';
-                }, 5000);
-            }
-        }
-
-        // ========== OFFLINE MODE ==========
-        function handleOnline() {
-            isOnline = true;
-            document.getElementById('offlineIndicator').style.display = 'none';
-            showToast('Back Online - Syncing data...', 'success');
-            syncOfflineChanges();
-            loadData();
-        }
-
-        function handleOffline() {
-            isOnline = false;
-            document.getElementById('offlineIndicator').style.display = 'block';
-            document.getElementById('offlineIndicator').textContent = 'You are currently offline - Changes will sync when you reconnect';
-            showToast('You are now offline', 'error');
-        }
-
-        function saveToLocalStorage(tickets) {
-            try {
-                localStorage.setItem(OFFLINE_STORAGE_KEY, JSON.stringify(tickets));
-            } catch (e) {
-                console.error('Storage error:', e);
-            }
-        }
-
-        function getFromLocalStorage() {
-            try {
-                const data = localStorage.getItem(OFFLINE_STORAGE_KEY);
-                return data ? JSON.parse(data) : null;
-            } catch (e) {
-                console.error('Storage error:', e);
-                return null;
-            }
-        }
-
-        function syncOfflineChanges() {
-            const pendingChanges = localStorage.getItem('bamakor_pending_changes');
-            if (!pendingChanges) return;
-
-            try {
-                const changes = JSON.parse(pendingChanges);
-                changes.forEach(change => {
-                    makeAPICall(change);
-                });
-                localStorage.removeItem('bamakor_pending_changes');
-            } catch (e) {
-                console.error('Sync error:', e);
-            }
-        }
-
-        function addPendingChange(action, ticketId, data = {}) {
-            const pending = JSON.parse(localStorage.getItem('bamakor_pending_changes') || '[]');
-            pending.push({action, ticketId, ...data});
-            localStorage.setItem('bamakor_pending_changes', JSON.stringify(pending));
-        }
-
-        function makeAPICall(change) {
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            };
-
-            if (change.action === 'status') {
-                fetch('/api/tickets/status', {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ticketId: change.ticketId, status: change.status})
-                }).catch(err => console.error('Sync error:', err));
-            } else if (change.action === 'notes') {
-                fetch('/api/tickets/notes', {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ticketId: change.ticketId, notes: change.notes})
-                }).catch(err => console.error('Sync error:', err));
-            } else if (change.action === 'delete') {
-                fetch('/api/tickets/delete', {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify({ticketId: change.ticketId})
-                }).catch(err => console.error('Sync error:', err));
-            }
-        }
 
         // ========== DATA LOADING ==========
         async function loadData() {
             try {
-                if (isOnline) {
-                    const ticketsRes = await fetch('/api/tickets', {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
-                    const ticketsData = await ticketsRes.json();
-                    
-                    if (!ticketsData.ok || !ticketsData.tickets) {
-                        throw new Error('Invalid response format');
-                    }
+                const [ticketsRes, empRes] = await Promise.all([
+                    fetch('/api/tickets'),
+                    fetch('/api/employees')
+                ]);
 
-                    allTickets = ticketsData.tickets.filter(t => t.status !== 'היסטוריה').sort((a, b) => {
-                        if (a.status === 'פתוח' && b.status !== 'פתוח') return -1;
-                        if (a.status !== 'פתוח' && b.status === 'פתוח') return 1;
-                        return 0;
-                    });
+                const ticketsData = await ticketsRes.json();
+                const empData = await empRes.json();
 
-                    allHistory = ticketsData.tickets.filter(t => t.status === 'היסטוריה') || [];
-                    
-                    saveToLocalStorage({tickets: allTickets, history: allHistory});
-                    
-                    const empRes = await fetch('/api/employees', {
-                        headers: { 'Authorization': `Bearer ${authToken}` }
-                    });
-                    const empData = await empRes.json();
-                    
-                    if (empData.ok && empData.employees) {
-                        allEmployees = empData.employees;
-                        populateEmployeeSelect();
-                        renderTeamSection();
-                    }
-                } else {
-                    const cached = getFromLocalStorage();
-                    if (cached) {
-                        allTickets = cached.tickets || [];
-                        allHistory = cached.history || [];
-                    }
-                }
+                allTickets = ticketsData.tickets || [];
+                allEmployees = empData.employees || [];
 
                 updateStats();
                 renderTickets();
-                renderHistory();
-            } catch(e) {
-                console.error('Error:', e);
-                const cached = getFromLocalStorage();
-                if (cached) {
-                    allTickets = cached.tickets || [];
-                    allHistory = cached.history || [];
-                    updateStats();
-                    renderTickets();
-                    renderHistory();
-                    showToast('Loaded from offline cache', 'success');
-                } else {
-                    showToast('Error loading data', 'error');
-                }
+                renderTeamSection();
+                populateEmployeeSelect();
+            } catch (error) {
+                console.error("Error loading data:", error);
+                showToast('Error loading data', 'error');
             }
         }
 
+        // ========== UI UPDATES ==========
         function updateStats() {
             const open = allTickets.filter(t => t.status === 'פתוח').length;
             const closed = allTickets.filter(t => t.status === 'סגור').length;
@@ -1312,51 +647,57 @@
         }
 
         function getFilteredTickets(filter) {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
+            const search = document.getElementById('searchInput').value.toLowerCase();
             let filtered = allTickets.filter(t => {
-                const searchText = [t.ticketId, t.phone, t.street, t.building, t.apartment, t.issue].join(' ').toLowerCase();
-                return searchText.includes(searchTerm);
+                const text = [t.ticketId, t.phone, t.street, t.issue].join(' ').toLowerCase();
+                return text.includes(search);
             });
 
-            if (filter === 'open') {
-                filtered = filtered.filter(t => t.status === 'פתוח');
-            } else if (filter === 'closed') {
-                filtered = filtered.filter(t => t.status === 'סגור');
-            }
+            if (filter === 'open') filtered = filtered.filter(t => t.status === 'פתוח');
+            if (filter === 'closed') filtered = filtered.filter(t => t.status === 'סגור');
 
             return filtered;
         }
 
-        function getFilteredHistory() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
-            return allHistory.filter(t => {
-                const searchText = [t.ticketId, t.phone, t.street, t.building, t.apartment, t.issue].join(' ').toLowerCase();
-                return searchText.includes(searchTerm);
-            });
+        function renderTickets() {
+            const all = getFilteredTickets('all');
+            const open = getFilteredTickets('open');
+            const closed = getFilteredTickets('closed');
+
+            document.getElementById('ticketsBody').innerHTML = all.length > 0 
+                ? all.map(renderRow).join('')
+                : '<tr><td colspan="7" class="empty-message">No tickets found</td></tr>';
+
+            document.getElementById('openBody').innerHTML = open.length > 0 
+                ? open.map(renderRow).join('')
+                : '<tr><td colspan="6" class="empty-message">No open tickets</td></tr>';
+
+            document.getElementById('closedBody').innerHTML = closed.length > 0 
+                ? closed.map(t => `
+                    <tr>
+                        <td><strong>${t.ticketId}</strong></td>
+                        <td>${t.phone}</td>
+                        <td>${t.street}, ${t.building}/${t.apartment}</td>
+                        <td>${t.issue}</td>
+                        <td>${new Date(t.closedDate).toLocaleDateString()}</td>
+                        <td>
+                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">View</button>
+                        </td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="6" class="empty-message">No closed tickets</td></tr>';
         }
 
-        function formatDate(dateString) {
-            if (!dateString) return '-';
-            try {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-            } catch (e) {
-                return dateString;
-            }
-        }
-
-        // ========== RENDERING ==========
-        function renderTicketRow(t) {
+        function renderRow(t) {
             return `
                 <tr>
                     <td><strong>${t.ticketId}</strong></td>
-                    <td class="col-phone">${t.phone}</td>
-                    <td class="col-street">${t.street}, ${t.building}/${t.apartment}</td>
+                    <td>${t.phone}</td>
+                    <td>${t.street}, ${t.building}/${t.apartment}</td>
                     <td>${t.issue}</td>
                     <td>
-                        <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
+                        <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" 
+                            onclick="toggleStatus('${t.ticketId}', '${t.status}')">
                             ${t.status === 'סגור' ? 'Closed' : 'Open'}
                         </button>
                     </td>
@@ -1373,58 +714,14 @@
             `;
         }
 
-        function renderHistoryRow(t) {
-            return `
-                <tr>
-                    <td><strong>${t.ticketId}</strong></td>
-                    <td class="col-phone">${t.phone}</td>
-                    <td class="col-street">${t.street}, ${t.building}/${t.apartment}</td>
-                    <td>${t.issue}</td>
-                    <td><span class="closed-date">${formatDate(t.closedDate)}</span></td>
-                    <td>${t.assignedTo || '-'}</td>
-                    <td>
-                        <div class="action-buttons">
-                            <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">View</button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-
-        function renderTickets() {
-            const all = getFilteredTickets('all');
-            const open = getFilteredTickets('open');
-            const closed = getFilteredTickets('closed');
-
-            document.getElementById('ticketsBody').innerHTML = all.length > 0 
-                ? all.map(renderTicketRow).join('')
-                : '<tr><td colspan="7" class="empty-message">No tickets found</td></tr>';
-
-            document.getElementById('openBody').innerHTML = open.length > 0 
-                ? open.map(renderTicketRow).join('')
-                : '<tr><td colspan="7" class="empty-message">No open tickets</td></tr>';
-
-            document.getElementById('closedBody').innerHTML = closed.length > 0 
-                ? closed.map(renderTicketRow).join('')
-                : '<tr><td colspan="7" class="empty-message">No closed tickets</td></tr>';
-        }
-
-        function renderHistory() {
-            const history = getFilteredHistory();
-            
-            document.getElementById('historyBody').innerHTML = history.length > 0 
-                ? history.map(renderHistoryRow).join('')
-                : '<tr><td colspan="7" class="empty-message">No history yet</td></tr>';
-        }
-
         function renderTeamSection() {
             if (allEmployees.length === 0) {
-                document.getElementById('teamGrid').innerHTML = '<div class="empty-message">No team members found</div>';
+                document.getElementById('teamGrid').innerHTML = '<div class="empty-message">No team members</div>';
                 return;
             }
 
             document.getElementById('teamGrid').innerHTML = allEmployees.map(emp => `
-                <div class="team-card" onclick="openEmployeeTickets('${emp.name}', '${emp.email}')">
+                <div class="team-card">
                     <h3>${emp.name}</h3>
                     <p>${emp.email}</p>
                     <div class="ticket-count">${emp.ticketsCount || 0} tickets</div>
@@ -1434,44 +731,13 @@
 
         function populateEmployeeSelect() {
             const select = document.getElementById('assignTo');
-            const options = allEmployees.map(emp => 
-                `<option value="${emp.name}" data-email="${emp.email}">${emp.name}</option>`
-            ).join('');
-            select.innerHTML = '<option value="">Select Employee...</option>' + options;
+            select.innerHTML = '<option value="">Select Employee...</option>' + 
+                allEmployees.map(emp => 
+                    `<option value="${emp.name}" data-email="${emp.email}">${emp.name}</option>`
+                ).join('');
         }
 
-        // ========== UI INTERACTIONS ==========
-        function toggleMenu() {
-            const tabs = document.getElementById('navTabs');
-            tabs.classList.toggle('active');
-        }
-
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.classList.add('hide');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function switchTab(tab) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            
-            document.getElementById(tab + 'Section').classList.add('active');
-            event.target.classList.add('active');
-            
-            const tabs = document.getElementById('navTabs');
-            if (tabs.classList.contains('active')) {
-                tabs.classList.remove('active');
-            }
-        }
-
-        // ========== MODAL FUNCTIONS ==========
+        // ========== MODALS ==========
         function openAssignModal(ticketId) {
             document.getElementById('assignTicketId').value = ticketId;
             document.getElementById('assignModal').classList.add('active');
@@ -1482,10 +748,10 @@
         }
 
         function openDetailsModal(ticketId) {
-            const ticket = allTickets.find(t => t.ticketId === ticketId) || allHistory.find(t => t.ticketId === ticketId);
+            const ticket = allTickets.find(t => t.ticketId === ticketId);
             if (!ticket) return;
 
-            const detailsHtml = `
+            document.getElementById('ticketDetails').innerHTML = `
                 <div class="detail-item">
                     <div class="detail-label">Ticket ID</div>
                     <div class="detail-value">${ticket.ticketId}</div>
@@ -1504,18 +770,12 @@
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Status</div>
-                    <div class="detail-value">${ticket.status === 'סגור' || ticket.status === 'היסטוריה' ? 'Closed' : 'Open'}</div>
+                    <div class="detail-value">${ticket.status === 'סגור' ? 'Closed' : 'Open'}</div>
                 </div>
                 <div class="detail-item">
                     <div class="detail-label">Assigned To</div>
                     <div class="detail-value">${ticket.assignedTo || 'Not assigned'}</div>
                 </div>
-                ${ticket.closedDate ? `
-                <div class="detail-item">
-                    <div class="detail-label">Closed Date</div>
-                    <div class="detail-value">${formatDate(ticket.closedDate)}</div>
-                </div>
-                ` : ''}
                 ${ticket.notes ? `
                 <div class="detail-item">
                     <div class="detail-label">Notes</div>
@@ -1523,8 +783,6 @@
                 </div>
                 ` : ''}
             `;
-
-            document.getElementById('ticketDetails').innerHTML = detailsHtml;
             document.getElementById('detailsModal').classList.add('active');
         }
 
@@ -1535,7 +793,6 @@
         function openNotesModal(ticketId) {
             const ticket = allTickets.find(t => t.ticketId === ticketId);
             if (!ticket) return;
-
             document.getElementById('notesTicketId').value = ticketId;
             document.getElementById('notesText').value = ticket.notes || '';
             document.getElementById('notesModal').classList.add('active');
@@ -1543,40 +800,6 @@
 
         function closeNotesModal() {
             document.getElementById('notesModal').classList.remove('active');
-        }
-
-        function saveNotes() {
-            const ticketId = document.getElementById('notesTicketId').value;
-            const notes = document.getElementById('notesText').value;
-
-            if (!isOnline) {
-                addPendingChange('notes', ticketId, {notes});
-            }
-
-            fetch('/api/tickets/notes', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ticketId, notes})
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok) {
-                    showToast('Notes saved successfully', 'success');
-                    closeNotesModal();
-                    loadData();
-                } else {
-                    showToast('Error saving notes', 'error');
-                }
-            })
-            .catch(err => {
-                if (isOnline) {
-                    showToast('Error saving notes', 'error');
-                }
-                console.error('Error:', err);
-            });
         }
 
         function openDeleteModal(ticketId) {
@@ -1588,100 +811,27 @@
             document.getElementById('deleteModal').classList.remove('active');
         }
 
-        function confirmDelete() {
-            const ticketId = document.getElementById('deleteTicketId').value;
-
-            if (!isOnline) {
-                addPendingChange('delete', ticketId, {});
-            }
-
-            fetch('/api/tickets/delete', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ticketId})
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.ok) {
-                    showToast('Ticket deleted successfully', 'success');
-                    closeDeleteModal();
-                    loadData();
-                } else {
-                    showToast('Error deleting ticket', 'error');
-                }
-            })
-            .catch(err => {
-                if (isOnline) {
-                    showToast('Error deleting ticket', 'error');
-                }
-                console.error('Error:', err);
-            });
-        }
-
-        function openEmployeeTickets(empName, empEmail) {
-            const employeeTickets = allTickets.filter(t => t.assignedTo === empName);
-            
-            document.getElementById('employeeName').textContent = empName;
-            document.getElementById('employeeEmail').textContent = empEmail;
-            
-            if (employeeTickets.length === 0) {
-                document.getElementById('employeeTicketsContainer').innerHTML = 
-                    '<div class="empty-message">No tickets assigned to this employee</div>';
-            } else {
-                document.getElementById('employeeTicketsContainer').innerHTML = employeeTickets.map(t => `
-                    <div class="ticket-item">
-                        <div class="ticket-id">${t.ticketId}</div>
-                        <div class="ticket-issue">${t.issue}</div>
-                        <div class="ticket-details">
-                            <span>${t.street}, ${t.building}/${t.apartment}</span>
-                            <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
-                                ${t.status === 'סגור' ? 'Closed' : 'Open'}
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            document.getElementById('employeeTicketsModal').classList.add('active');
-        }
-
-        function closeEmployeeModal() {
-            document.getElementById('employeeTicketsModal').classList.remove('active');
-        }
-
-        async function toggleStatusButton(ticketId, currentStatus) {
+        // ========== ACTIONS ==========
+        async function toggleStatus(ticketId, currentStatus) {
             const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
             
-            if (!isOnline) {
-                addPendingChange('status', ticketId, {status: newStatus});
-            }
-            
-            fetch('/api/tickets/status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ticketId, status: newStatus})
-            })
-            .then(res => res.json())
-            .then(data => {
+            try {
+                const response = await fetch('/api/tickets/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId, status: newStatus })
+                });
+
+                const data = await response.json();
                 if (data.ok) {
                     showToast('Status updated', 'success');
                     loadData();
                 } else {
                     showToast('Error updating status', 'error');
                 }
-            })
-            .catch(e => {
-                if (isOnline) {
-                    showToast('Error updating status', 'error');
-                }
-                console.error('Error:', e);
-            });
+            } catch (error) {
+                showToast('Error updating status', 'error');
+            }
         }
 
         async function assignTicket() {
@@ -1697,34 +847,88 @@
                 return;
             }
 
-            closeModal();
-            showToast('Assigning ticket...', 'success');
+            try {
+                const response = await fetch('/api/tickets/assign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId, assignedTo: assignTo, email })
+                });
 
-            fetch('/api/tickets/assign', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`
-                },
-                body: JSON.stringify({ticketId, assignedTo: assignTo, email})
-            })
-            .then(res => res.json())
-            .then(data => {
+                const data = await response.json();
                 if (data.ok) {
-                    showToast('Ticket assigned and email sent!', 'success');
+                    showToast('Ticket assigned!', 'success');
+                    closeModal();
                     loadData();
                 } else {
                     showToast('Error assigning ticket', 'error');
                 }
-            })
-            .catch(err => {
+            } catch (error) {
                 showToast('Error assigning ticket', 'error');
-                console.error('Error:', err);
-            });
+            }
         }
 
-        // Periodic data refresh
-        setInterval(loadData, 600000);
+        async function saveNotes() {
+            const ticketId = document.getElementById('notesTicketId').value;
+            const notes = document.getElementById('notesText').value;
+
+            try {
+                const response = await fetch('/api/tickets/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId, notes })
+                });
+
+                const data = await response.json();
+                if (data.ok) {
+                    showToast('Notes saved', 'success');
+                    closeNotesModal();
+                    loadData();
+                }
+            } catch (error) {
+                showToast('Error saving notes', 'error');
+            }
+        }
+
+        async function confirmDelete() {
+            const ticketId = document.getElementById('deleteTicketId').value;
+
+            try {
+                const response = await fetch('/api/tickets/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ticketId })
+                });
+
+                const data = await response.json();
+                if (data.ok) {
+                    showToast('Ticket deleted', 'success');
+                    closeDeleteModal();
+                    loadData();
+                }
+            } catch (error) {
+                showToast('Error deleting ticket', 'error');
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById(tab + 'Section').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
     </script>
 </body>
 </html>
