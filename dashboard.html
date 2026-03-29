@@ -29,6 +29,15 @@
         }
         h1 { color: #3F3F3F; font-size: 32px; }
         
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #3F3F3F;
+        }
+        
         .controls {
             display: flex;
             gap: 10px;
@@ -260,7 +269,8 @@
         }
         
         .modal-content input,
-        .modal-content select {
+        .modal-content select,
+        .modal-content textarea {
             width: 100%;
             padding: 12px;
             margin-bottom: 15px;
@@ -270,7 +280,8 @@
         }
         
         .modal-content input:focus,
-        .modal-content select:focus {
+        .modal-content select:focus,
+        .modal-content textarea:focus {
             outline: none;
             border-color: #C41E3A;
         }
@@ -279,6 +290,23 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+        }
+        
+        .detail-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #3F3F3F;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            color: #666;
         }
         
         /* Team Section */
@@ -374,15 +402,21 @@
                 padding: 15px;
             }
             h1 { font-size: 24px; }
+            .hamburger-btn {
+                display: block;
+            }
             .controls { 
                 flex-direction: column; 
                 width: 100%; 
             }
             .search-box { width: 100%; }
             .tabs { 
-                flex-direction: row;
-                overflow-x: auto;
+                display: none;
+                flex-direction: column;
                 padding: 10px;
+            }
+            .tabs.active {
+                display: flex;
             }
             .tab { 
                 padding: 8px 12px;
@@ -437,18 +471,19 @@
 <body>
     <div class="container">
         <header>
-            <h1>🏢 Bamakor Dashboard</h1>
+            <h1>Bamakor Dashboard</h1>
+            <button class="hamburger-btn" onclick="toggleMenu()">☰</button>
             <div class="controls">
-                <input type="text" class="search-box" id="searchInput" placeholder="🔍 Search...">
-                <button class="btn" onclick="loadData()">🔄 Refresh</button>
+                <input type="text" class="search-box" id="searchInput" placeholder="Search...">
+                <button class="btn" onclick="loadData()">Refresh</button>
             </div>
         </header>
 
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('tickets')">📋 Tickets</button>
-            <button class="tab" onclick="switchTab('open')">⏳ Open</button>
-            <button class="tab" onclick="switchTab('closed')">✓ Closed</button>
-            <button class="tab" onclick="switchTab('team')">👥 Team</button>
+        <div class="tabs" id="navTabs">
+            <button class="tab active" onclick="switchTab('tickets')">Tickets</button>
+            <button class="tab" onclick="switchTab('open')">Open</button>
+            <button class="tab" onclick="switchTab('closed')">Closed</button>
+            <button class="tab" onclick="switchTab('team')">Team</button>
         </div>
 
         <div class="stats">
@@ -549,14 +584,25 @@
     <!-- Assignment Modal -->
     <div class="modal" id="assignModal">
         <div class="modal-content">
-            <h2>🎯 Assign Ticket</h2>
+            <h2>Assign Ticket</h2>
             <input type="hidden" id="assignTicketId">
             <select id="assignTo">
                 <option value="">Select Employee...</option>
             </select>
             <div class="modal-buttons">
                 <button class="btn" style="background: #999;" onclick="closeModal()">Cancel</button>
-                <button class="btn" onclick="assignTicket()">✓ Assign & Send Email</button>
+                <button class="btn" onclick="assignTicket()">Assign & Send Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ticket Details Modal -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content">
+            <h2>Ticket Details</h2>
+            <div id="ticketDetails"></div>
+            <div class="modal-buttons">
+                <button class="btn" onclick="closeDetailsModal()">Close</button>
             </div>
         </div>
     </div>
@@ -567,6 +613,11 @@
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW not available'));
+        }
+
+        function toggleMenu() {
+            const tabs = document.getElementById('navTabs');
+            tabs.classList.toggle('active');
         }
 
         function showToast(message, type = 'success') {
@@ -647,11 +698,12 @@
                     <td>${t.issue}</td>
                     <td>
                         <button class="status-btn status-${t.status === 'סגור' ? 'closed' : 'open'}" onclick="toggleStatusButton('${t.ticketId}', '${t.status}')">
-                            ${t.status === 'סגור' ? '✓ Closed' : '⏳ Open'}
+                            ${t.status === 'סגור' ? 'Closed' : 'Open'}
                         </button>
                     </td>
                     <td>${t.assignedTo || '-'}</td>
                     <td>
+                        <button class="action-btn" onclick="openDetailsModal('${t.ticketId}')">Details</button>
                         <button class="action-btn" onclick="openAssignModal('${t.ticketId}')">Assign</button>
                     </td>
                 </tr>
@@ -705,6 +757,12 @@
             
             document.getElementById(tab + 'Section').classList.add('active');
             event.target.classList.add('active');
+            
+            // Close menu on mobile
+            const tabs = document.getElementById('navTabs');
+            if (tabs.classList.contains('active')) {
+                tabs.classList.remove('active');
+            }
         }
 
         document.getElementById('searchInput').addEventListener('input', renderTickets);
@@ -718,6 +776,53 @@
             document.getElementById('assignModal').classList.remove('active');
         }
 
+        function openDetailsModal(ticketId) {
+            const ticket = allTickets.find(t => t.ticketId === ticketId);
+            if (!ticket) return;
+
+            const detailsHtml = `
+                <div class="detail-item">
+                    <div class="detail-label">Ticket ID</div>
+                    <div class="detail-value">${ticket.ticketId}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Phone</div>
+                    <div class="detail-value">${ticket.phone}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Street</div>
+                    <div class="detail-value">${ticket.street}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Building</div>
+                    <div class="detail-value">${ticket.building}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Apartment</div>
+                    <div class="detail-value">${ticket.apartment}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Issue</div>
+                    <div class="detail-value">${ticket.issue}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">${ticket.status === 'סגור' ? 'Closed' : 'Open'}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Assigned To</div>
+                    <div class="detail-value">${ticket.assignedTo || 'Not assigned'}</div>
+                </div>
+            `;
+
+            document.getElementById('ticketDetails').innerHTML = detailsHtml;
+            document.getElementById('detailsModal').classList.add('active');
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').classList.remove('active');
+        }
+
         async function toggleStatusButton(ticketId, currentStatus) {
             const newStatus = currentStatus === 'סגור' ? 'פתוח' : 'סגור';
             
@@ -729,7 +834,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.ok) {
-                    showToast('✓ Status updated', 'success');
+                    showToast('Status updated', 'success');
                     loadData();
                 } else {
                     showToast('Error updating status', 'error');
@@ -755,9 +860,8 @@
             }
 
             closeModal();
-            showToast('📬 Assigning ticket...', 'success');
+            showToast('Assigning ticket...', 'success');
 
-            // ✨ Async - don't wait
             fetch('/api/tickets/assign', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -766,7 +870,7 @@
             .then(res => res.json())
             .then(data => {
                 if (data.ok) {
-                    showToast('✓ Ticket assigned and email sent!', 'success');
+                    showToast('Ticket assigned and email sent!', 'success');
                     loadData();
                 } else {
                     showToast('Error assigning ticket', 'error');
