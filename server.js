@@ -1,22 +1,50 @@
 const express = require("express");
 const path = require("path");
 const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
 const app = express();
 app.use(express.json());
 
+// ========== ENVIRONMENT VARIABLES ==========
 const PORT = process.env.PORT || 3000;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "12345";
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Google OAuth
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'bamakor-super-secret-jwt-key-2024-yoni-levakor';
+
+// Google Apps Script
+const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
+
+// WhatsApp Configuration
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || '12345';
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const PHONE_NUMBER_ID = process.env.PHONE_NUMBER_ID;
-const APPS_SCRIPT_URL = process.env.APPS_SCRIPT_URL;
-const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-key-change-this";
+
+// Email Configuration
+const EMAIL_USER = process.env.EMAIL_USER || 'levyyoni5@gmail.com';
+const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
+
+console.log(`\n🚀 ========== BAMAKOR SERVER ==========`);
+console.log(`🔧 Environment: ${NODE_ENV}`);
+console.log(`📍 Port: ${PORT}`);
+console.log(`✅ Google Client ID: ${GOOGLE_CLIENT_ID ? '✓ Configured' : '❌ Missing'}`);
+console.log(`✅ JWT Secret: ${JWT_SECRET ? '✓ Configured' : '❌ Missing'}`);
+console.log(`✅ Apps Script URL: ${APPS_SCRIPT_URL ? '✓ Configured' : '❌ Missing'}`);
+console.log(`✅ WhatsApp Token: ${WHATSAPP_TOKEN ? '✓ Configured' : '❌ Missing'}`);
+console.log(`✅ Email Config: ${EMAIL_USER ? '✓ Configured' : '❌ Missing'}`);
+console.log(`=====================================\n`);
 
 // זיכרון זמני לניהול שיחה לפי טלפון
 const sessions = new Map();
 // מניעת עיבוד כפול של אותה הודעה
 const processedMessages = new Set();
 
+// ========== STATIC FILES ==========
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "dashboard.html"));
 });
@@ -26,7 +54,7 @@ app.get("/dashboard.html", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.status(200).json({ ok: true });
+  res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
 });
 
 // ========== GOOGLE AUTH ==========
@@ -43,7 +71,7 @@ app.post("/api/auth/google", async (req, res) => {
       return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL" });
     }
 
-    // Verify token with Google (בעתיד - כרגע נשתמש ב-apps script)
+    // Verify token with Apps Script
     const verifyResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -70,6 +98,8 @@ app.post("/api/auth/google", async (req, res) => {
       { expiresIn: "24h" }
     );
 
+    console.log(`✅ User logged in: ${userData.user.email} (${userData.user.role})`);
+
     res.json({
       ok: true,
       token: jwtToken,
@@ -81,7 +111,7 @@ app.post("/api/auth/google", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Google Auth Error:", error);
+    console.error("❌ Google Auth Error:", error);
     res.status(401).json({ ok: false, error: "Authentication failed" });
   }
 });
@@ -113,9 +143,11 @@ app.get("/webhook", (req, res) => {
   const challenge = req.query["hub.challenge"];
 
   if (mode === "subscribe" && token === VERIFY_TOKEN) {
+    console.log("✅ WhatsApp webhook verified");
     return res.status(200).send(challenge);
   }
 
+  console.log("❌ Invalid webhook verification");
   return res.sendStatus(403);
 });
 
@@ -151,7 +183,7 @@ app.post("/webhook", async (req, res) => {
 
     await sendWhatsAppMessage(from, replyText);
   } catch (error) {
-    console.error("Webhook error:", error);
+    console.error("❌ Webhook error:", error);
   }
 });
 
@@ -168,7 +200,7 @@ app.get("/api/tickets", verifyToken, async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error("GET /api/tickets error:", error);
+    console.error("❌ GET /api/tickets error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -184,7 +216,7 @@ app.get("/api/employees", verifyToken, async (req, res) => {
 
     res.json(data);
   } catch (error) {
-    console.error("GET /api/employees error:", error);
+    console.error("❌ GET /api/employees error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -225,9 +257,10 @@ app.post("/api/tickets/status", verifyToken, async (req, res) => {
     });
 
     const data = await response.json();
+    console.log(`✅ Ticket ${ticketId} status updated to ${status}`);
     res.json(data);
   } catch (error) {
-    console.error("POST /api/tickets/status error:", error);
+    console.error("❌ POST /api/tickets/status error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -235,8 +268,6 @@ app.post("/api/tickets/status", verifyToken, async (req, res) => {
 app.post("/api/tickets/assign", verifyToken, async (req, res) => {
   try {
     const { ticketId, assignedTo, email } = req.body || {};
-
-    console.log("Assign request received:", { ticketId, assignedTo, email });
 
     if (!ticketId || !assignedTo || !email) {
       return res.status(400).json({
@@ -249,7 +280,8 @@ app.post("/api/tickets/assign", verifyToken, async (req, res) => {
       return res.status(500).json({ ok: false, error: "Missing APPS_SCRIPT_URL env variable" });
     }
 
-    console.log("Updating Google Sheets...");
+    console.log(`📨 Assigning ticket ${ticketId} to ${assignedTo}`);
+
     const updateResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: {
@@ -266,14 +298,11 @@ app.post("/api/tickets/assign", verifyToken, async (req, res) => {
     const updateData = await updateResponse.json();
 
     if (!updateData.ok) {
-      console.log("Sheet update failed:", updateData);
       return res.status(400).json({
         ok: false,
         error: updateData.error || "Failed to assign ticket"
       });
     }
-
-    console.log("Sheet updated, sending email...");
 
     const emailResponse = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
@@ -291,21 +320,21 @@ app.post("/api/tickets/assign", verifyToken, async (req, res) => {
     const emailData = await emailResponse.json();
 
     if (!emailData.ok) {
-      console.error("Email send failed:", emailData);
+      console.error("⚠️ Email send failed:", emailData);
       return res.status(500).json({
         ok: false,
         error: "Ticket assigned but email failed"
       });
     }
 
-    console.log("Email sent successfully");
+    console.log(`✅ Ticket ${ticketId} assigned and email sent to ${email}`);
     res.json({
       ok: true,
       message: "Ticket assigned and email sent successfully"
     });
 
   } catch (error) {
-    console.error("POST /api/tickets/assign error:", error);
+    console.error("❌ POST /api/tickets/assign error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -338,9 +367,10 @@ app.post("/api/tickets/notes", verifyToken, async (req, res) => {
     });
 
     const data = await response.json();
+    console.log(`✅ Notes updated for ticket ${ticketId}`);
     res.json(data);
   } catch (error) {
-    console.error("POST /api/tickets/notes error:", error);
+    console.error("❌ POST /api/tickets/notes error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -372,9 +402,10 @@ app.post("/api/tickets/delete", verifyToken, async (req, res) => {
     });
 
     const data = await response.json();
+    console.log(`✅ Ticket ${ticketId} deleted`);
     res.json(data);
   } catch (error) {
-    console.error("POST /api/tickets/delete error:", error);
+    console.error("❌ POST /api/tickets/delete error:", error);
     res.status(500).json({ ok: false, error: error.message });
   }
 });
@@ -525,6 +556,8 @@ async function writeTicketToSheet(data) {
   if (!parsed.ok) {
     throw new Error(`Apps Script error: ${parsed.error || "unknown error"}`);
   }
+
+  console.log(`✅ Ticket ${data.ticketId} created via WhatsApp`);
 }
 
 async function sendWhatsAppMessage(to, messageText) {
@@ -559,6 +592,8 @@ async function sendWhatsAppMessage(to, messageText) {
   if (!response.ok) {
     throw new Error(`WhatsApp API error: ${rawText}`);
   }
+
+  console.log(`✅ WhatsApp message sent to ${to}`);
 }
 
 function generateTicketId() {
@@ -675,10 +710,16 @@ setInterval(() => {
   for (const [phone, session] of sessions.entries()) {
     if (now - session.updatedAt > 60 * 60 * 1000) {
       sessions.delete(phone);
+      console.log(`🗑️ Cleaned up session for ${phone}`);
     }
   }
 }, 10 * 60 * 1000);
 
+// ========== START SERVER ==========
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`\n✅ Bamakor server is running on http://localhost:${PORT}`);
+  console.log(`📊 Dashboard: http://localhost:${PORT}/dashboard.html`);
+  console.log(`🔗 API: http://localhost:${PORT}/api/`);
+  console.log(`📱 WebHook: http://localhost:${PORT}/webhook`);
+  console.log(`❤️  Health: http://localhost:${PORT}/health\n`);
 });
